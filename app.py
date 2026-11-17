@@ -93,19 +93,24 @@ def scrape_race(race_id):
         venues = {"01":"札幌","02":"函館","03":"福島","04":"新潟","05":"東京",
                   "06":"中山","07":"中京","08":"京都","09":"阪神","10":"小倉"}
         venue = venues.get(race_id[4:6], "不明")
+
         
         horses = []
-        for row in soup.select("tr.HorseList"):
-            name = row.select_one(".HorseName a")
-            jockey = row.select_one(".Jockey a")
-            tds = row.select("td")
-            if name:
-                horses.append({
-                    "horse_name": name.get_text(strip=True),
-                    "jockey": jockey.get_text(strip=True) if jockey else "",
-                    "frame": tds[0].get_text(strip=True) if tds else "0",
-                    "distance": distance
-                })
+for row in soup.select("tr.HorseList"):
+    name = row.select_one(".HorseName a")
+    jockey = row.select_one(".Jockey a")
+    tds = row.select("td")
+    if name:
+        # 馬番は通常2番目のtd
+        umaban = tds[1].get_text(strip=True) if len(tds) > 1 else ""
+        wakuban = tds[0].get_text(strip=True) if tds else ""
+        horses.append({
+            "horse_name": name.get_text(strip=True),
+            "jockey": jockey.get_text(strip=True) if jockey else "",
+            "frame": wakuban,      # 枠番
+            "umaban": umaban,      # 馬番
+            "distance": distance
+        })
         
         if not horses:
             return None, "出走馬なし"
