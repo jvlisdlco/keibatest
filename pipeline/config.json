@@ -1,40 +1,23 @@
 {
-  "strong_venues": [
-    "福島",
-    "函館",
-    "中山",
-    "札幌",
-    "東京"
-  ],
-  "turf_cols": ["frame_rank", "distance", "jockey_avg_rank", "trainer_avg_rank", "avg_agari", "avg_last_corner", "sire_win_rate", "damsire_win_rate"]
-  "dirt_cols": [
-    "frame_rank",
-    "distance",
-    "jockey_avg_rank",
-    "jockey_win_rate",
-    "trainer_avg_rank",
-    "trainer_win_rate",
-    "venue_win_rate",
-    "track_win_rate",
-    "dist_win_rate",
-    "avg_last_corner"
-  ],
+  "strong_venues": ["福島", "函館", "中山", "札幌", "東京"],
+  "turf_cols": ["frame_rank", "distance", "jockey_avg_rank", "trainer_avg_rank", "avg_agari", "avg_last_corner", "sire_win_rate", "damsire_win_rate", "sire_venue_win", "sire_dist_win", "damsire_venue_win", "damsire_dist_win"],
+  "dirt_cols": ["frame_rank", "distance", "jockey_avg_rank", "jockey_win_rate", "trainer_avg_rank", "trainer_win_rate", "venue_win_rate", "track_win_rate", "dist_win_rate", "avg_last_corner"],
   "models": {
     "venue_models": {
-      "福島_turf": "pipeline/model_福島_turf.pkl",
-      "福島_dirt": "pipeline/model_福島_dirt.pkl",
-      "函館_turf": "pipeline/model_函館_turf.pkl",
-      "函館_dirt": "pipeline/model_函館_dirt.pkl",
-      "中山_turf": "pipeline/model_中山_turf.pkl",
-      "中山_dirt": "pipeline/model_中山_dirt.pkl",
-      "札幌_turf": "pipeline/model_札幌_turf.pkl",
-      "札幌_dirt": "pipeline/model_札幌_dirt.pkl",
-      "東京_turf": "pipeline/model_東京_turf.pkl",
-      "東京_dirt": "pipeline/model_東京_dirt.pkl"
+      "福島_turf": "pipeline/model_福島_turf.txt",
+      "福島_dirt": "pipeline/model_福島_dirt.txt",
+      "函館_turf": "pipeline/model_函館_turf.txt",
+      "函館_dirt": "pipeline/model_函館_dirt.txt",
+      "中山_turf": "pipeline/model_中山_turf.txt",
+      "中山_dirt": "pipeline/model_中山_dirt.txt",
+      "札幌_turf": "pipeline/model_札幌_turf.txt",
+      "札幌_dirt": "pipeline/model_札幌_dirt.txt",
+      "東京_turf": "pipeline/model_東京_turf.txt",
+      "東京_dirt": "pipeline/model_東京_dirt.txt"
     },
     "national_models": {
-      "turf": "pipeline/model_national_turf.pkl",
-      "dirt": "pipeline/model_national_dirt.pkl"
+      "turf": "pipeline/model_national_turf.txt",
+      "dirt": "pipeline/model_national_dirt.txt"
     }
   }
 }
