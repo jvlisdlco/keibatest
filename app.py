@@ -159,6 +159,9 @@ if st.button("予想する", type="primary"):
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
             st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
+            st.write("騎手成績:")
+            show_cols = ["horse_name", "jockey", "jockey_avg_rank"]
+            st.dataframe(info["horses"][show_cols].head(10))
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想（{mtype}）")
