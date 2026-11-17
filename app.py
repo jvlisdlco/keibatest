@@ -212,8 +212,7 @@ if st.button("予想する", type="primary"):
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
             st.info(f"**{info['name']}** / {info['venue']} {label} {info['distance']}m")
-            label = "芝" if info["surface"] == "turf" else "ダート"
-            st.info(f"**{info['name']}** / {info['venue']} {label} {info['distance']}m")
+           
             
             # ===== ここから追加 =====
             st.write("=== 特徴量確認 ===")
