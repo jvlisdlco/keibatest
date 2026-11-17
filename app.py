@@ -265,6 +265,12 @@ if st.button("予想する", type="primary"):
             if result is not None:
                 st.subheader(f"予想結果（{mtype}モデル）")
                 display = result[["umaban", "horse_name", "jockey", "予想順位", "avg_agari", "avg_last_corner"]].copy()
+st.write("---")
+st.write("特徴量確認:")
+check_cols = ["horse_name", "avg_agari", "avg_last_corner", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]
+st.dataframe(info["horses"][check_cols])
+st.write("統計:")
+st.write(info["horses"][["avg_agari", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]].describe())                
                 display.columns = ["馬番", "馬名", "騎手", "予想順位", "上がり", "通過"]
                 st.dataframe(display, hide_index=True)
             else:
