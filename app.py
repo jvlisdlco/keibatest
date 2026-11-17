@@ -217,21 +217,35 @@ def scrape_race(race_id, stats):
     return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
 
 def predict_race(models, race_df, venue, surface):
+    score_venue = None
+    score_national = None
     if (venue, surface) in models["venue"]:
         info = models["venue"][(venue, surface)]
-        model_type = "会場"
-    elif surface in models["national"]:
+        cols = info["cols"]
+        for c in cols:
+            if c not in race_df.columns:
+                race_df[c] = 0
+        X = race_df[cols].fillna(0).values
+        score_venue = info["model"].predict(X)
+    if surface in models["national"]:
         info = models["national"][surface]
+        cols = info["cols"]
+        for c in cols:
+            if c not in race_df.columns:
+                race_df[c] = 0
+        X = race_df[cols].fillna(0).values
+        score_national = info["model"].predict(X)
+    if score_venue is not None and score_national is not None:
+        scores = (score_venue + score_national) / 2
+        model_type = "アンサンブル"
+    elif score_venue is not None:
+        scores = score_venue
+        model_type = "会場"
+    elif score_national is not None:
+        scores = score_national
         model_type = "全国"
     else:
         return None, "モデルなし"
-    model = info["model"]
-    cols = info["cols"]
-    for c in cols:
-        if c not in race_df.columns:
-            race_df[c] = 0
-    X = race_df[cols].fillna(0).values
-    scores = model.predict(X)
     result = race_df[["umaban", "horse_name", "jockey"]].copy()
     result["score"] = scores
     result["予想順位"] = result["score"].rank(ascending=False).astype(int)
@@ -244,8 +258,6 @@ try:
     models = load_models()
     stats = load_stats()
     st.sidebar.success("読込完了")
-    st.sidebar.write(f"会場モデル数: {len(models['venue'])}")
-    st.sidebar.write(f"全国モデル数: {len(models['national'])}")
 except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
@@ -265,10 +277,17 @@ if st.button("予想する", type="primary"):
             st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
-                st.subheader(f"予想結果（{mtype}モデル）")
-                st.write(f"会場: {info['venue']} / 使用モデル: {mtype}")
+                st.subheader(f"予想結果（{mtype}）")
                 display = result[["umaban", "horse_name", "jockey", "予想順位"]].copy()
                 display.columns = ["馬番", "馬名", "騎手", "予想順位"]
                 st.dataframe(display, hide_index=True)
+                st.write("---")
+                st.write("**推奨買い目:**")
+                top1 = display["馬番"].iloc[0]
+                top4 = display["馬番"].head(4).tolist()
+                top5 = display["馬番"].head(5).tolist()
+                st.write(f"ワイド（軸{top1}）: {top1}-{top4[1]}, {top1}-{top4[2]}, {top1}-{top4[3]}（3点）")
+                st.write(f"馬連4頭BOX: {', '.join(map(str, top4))}（6点）")
+                st.write(f"3連複5頭BOX: {', '.join(map(str, top5))}（10点）")
             else:
                 st.error(mtype)
