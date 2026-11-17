@@ -52,46 +52,48 @@ def load_stats():
 
 def get_horse_history(horse_id):
     if not horse_id:
-        return 37.0, 7.0
+        return None, None
     url = f"https://db.netkeiba.com/horse/result/{horse_id}"
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=8)
+        resp = requests.get(url, headers=HEADERS, timeout=10)
         resp.encoding = "euc-jp"
         soup = BeautifulSoup(resp.content, "html.parser", from_encoding="euc-jp")
         table = soup.select_one("table.db_h_race_results")
         if not table:
-            return 37.0, 7.0
+            return None, None
         agari_list = []
         corner_list = []
-        for row in table.select("tr")[1:10]:
+        for row in table.select("tr")[1:20]:
             tds = row.select("td")
             if len(tds) < 28:
                 continue
             race_name = tds[4].get_text(strip=True) if len(tds) > 4 else ""
-            if "障" in race_name:
+            dist_text = tds[14].get_text(strip=True) if len(tds) > 14 else ""
+            if "障" in race_name or "障" in dist_text:
                 continue
             agari_text = tds[27].get_text(strip=True)
             corner_text = tds[25].get_text(strip=True)
             try:
-                if agari_text and agari_text != "-":
-                    val = float(agari_text)
-                    if 30 <= val <= 45:
-                        agari_list.append(val)
+                val = float(agari_text)
+                if 33.0 <= val <= 40.0:
+                    agari_list.append(val)
             except:
                 pass
             try:
-                if corner_text and "-" in corner_text:
+                if "-" in corner_text:
                     parts = corner_text.split("-")
-                    corner_list.append(int(parts[-1]))
+                    last = int(parts[-1])
+                    if 1 <= last <= 18:
+                        corner_list.append(last)
             except:
                 pass
             if len(agari_list) >= 5:
                 break
-        avg_agari = sum(agari_list) / len(agari_list) if agari_list else 37.0
-        avg_corner = sum(corner_list) / len(corner_list) if corner_list else 7.0
+        avg_agari = round(sum(agari_list) / len(agari_list), 1) if len(agari_list) >= 2 else None
+        avg_corner = round(sum(corner_list) / len(corner_list), 1) if len(corner_list) >= 2 else None
         return avg_agari, avg_corner
     except:
-        return 37.0, 7.0
+        return None, None
 
 def get_pedigree(horse_id):
     if not horse_id:
@@ -170,8 +172,12 @@ def scrape_race(race_id, stats):
     df["damsire"] = ""
     df["sire_win_rate"] = 0.08
     df["damsire_win_rate"] = 0.08
-    df["avg_agari"] = 37.0
-    df["avg_last_corner"] = 7.0
+    df["avg_agari"] = 36.5
+    df["avg_last_corner"] = 6.0
+    df["venue_win_rate"] = 0.08
+    df["track_win_rate"] = 0.08
+    df["dist_win_rate"] = 0.08
+    horse_stats = stats.get("horse_stats", pd.DataFrame())
     for idx, row in df.iterrows():
         match = find_match(stats.get("jockey_stats", pd.DataFrame()), "jockey", row["jockey"])
         if match is not None:
@@ -181,14 +187,23 @@ def scrape_race(race_id, stats):
         if match is not None:
             df.loc[idx, "trainer_avg_rank"] = match["trainer_avg_rank"]
             df.loc[idx, "trainer_win_rate"] = match["trainer_win_rate"]
-        avg_agari, avg_corner = get_horse_history(row["horse_id"])
-        df.loc[idx, "avg_agari"] = avg_agari
-        df.loc[idx, "avg_last_corner"] = avg_corner
-        time.sleep(0.2)
+        horse_match = find_match(horse_stats, "horse_name", row["horse_name"])
+        if horse_match is not None:
+            if "avg_agari" in horse_match.index and pd.notna(horse_match["avg_agari"]):
+                df.loc[idx, "avg_agari"] = horse_match["avg_agari"]
+            if "avg_last_corner" in horse_match.index and pd.notna(horse_match["avg_last_corner"]):
+                df.loc[idx, "avg_last_corner"] = horse_match["avg_last_corner"]
+        else:
+            avg_agari, avg_corner = get_horse_history(row["horse_id"])
+            if avg_agari is not None:
+                df.loc[idx, "avg_agari"] = avg_agari
+            if avg_corner is not None:
+                df.loc[idx, "avg_last_corner"] = avg_corner
+            time.sleep(0.15)
         sire, damsire = get_pedigree(row["horse_id"])
         df.loc[idx, "sire"] = sire
         df.loc[idx, "damsire"] = damsire
-        time.sleep(0.15)
+        time.sleep(0.1)
         match = find_match(stats.get("sire_stats", pd.DataFrame()), "sire", sire)
         if match is not None:
             df.loc[idx, "sire_win_rate"] = match["sire_win_rate"]
@@ -199,9 +214,6 @@ def scrape_race(race_id, stats):
     df["sire_dist_win"] = df["sire_win_rate"]
     df["damsire_venue_win"] = df["damsire_win_rate"]
     df["damsire_dist_win"] = df["damsire_win_rate"]
-    df["venue_win_rate"] = 0.08
-    df["track_win_rate"] = 0.08
-    df["dist_win_rate"] = 0.08
     return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
 
 def predict_race(models, race_df, venue, surface):
@@ -220,7 +232,7 @@ def predict_race(models, race_df, venue, surface):
             race_df[c] = 0
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
-    result = race_df[["umaban", "horse_name", "jockey", "avg_agari"]].copy()
+    result = race_df[["umaban", "horse_name", "jockey", "avg_agari", "avg_last_corner", "trainer_avg_rank"]].copy()
     result["score"] = scores
     result["予想順位"] = result["score"].rank(ascending=False).astype(int)
     return result.sort_values("予想順位"), model_type
@@ -252,8 +264,8 @@ if st.button("予想する", type="primary"):
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想結果（{mtype}モデル）")
-                display = result[["umaban", "horse_name", "jockey", "予想順位", "avg_agari"]].copy()
-                display.columns = ["馬番", "馬名", "騎手", "予想順位", "上がり"]
+                display = result[["umaban", "horse_name", "jockey", "予想順位", "avg_agari", "avg_last_corner"]].copy()
+                display.columns = ["馬番", "馬名", "騎手", "予想順位", "上がり", "通過"]
                 st.dataframe(display, hide_index=True)
             else:
                 st.error(mtype)
