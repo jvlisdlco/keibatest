@@ -65,7 +65,7 @@ def get_horse_history(horse_id):
         corner_list = []
         for row in table.select("tr")[1:6]:
             tds = row.select("td")
-            if len(tds) < 15:
+            if len(tds) < 12:
                 continue
             agari_text = tds[11].get_text(strip=True) if len(tds) > 11 else ""
             corner_text = tds[10].get_text(strip=True) if len(tds) > 10 else ""
@@ -236,7 +236,7 @@ if st.button("予想する", type="primary"):
     if len(race_id) != 12:
         st.error("12桁で入力")
     else:
-        with st.spinner("過去成績取得中（1分程度）..."):
+        with st.spinner("過去成績取得中..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
@@ -245,7 +245,7 @@ if st.button("予想する", type="primary"):
             st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
             st.write("確認:")
             cols = ["horse_name", "avg_agari", "jockey_avg_rank", "sire_win_rate"]
-            st.dataframe(info["horses"][cols].head(8))
+            st.dataframe(info["horses"][cols])
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想（{mtype}）")
