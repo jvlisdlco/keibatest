@@ -38,7 +38,7 @@ def load_models():
 @st.cache_data
 def load_stats():
     stats = {}
-    for name in ["jockey_stats", "trainer_stats", "sire_stats", "damsire_stats"]:
+    for name in ["jockey_stats", "trainer_stats", "sire_stats", "damsire_stats", "horse_stats"]:
         path = f"{PIPELINE_DIR}/{name}.csv"
         if os.path.exists(path):
             df = pd.read_csv(path)
@@ -63,9 +63,7 @@ def get_pedigree(horse_id):
             links = blood.select("a")
             sire = links[0].get_text(strip=True) if len(links) > 0 else ""
             damsire = links[4].get_text(strip=True) if len(links) > 4 else ""
-            sire = sire.replace("\xa0", " ").strip()
-            damsire = damsire.replace("\xa0", " ").strip()
-            return sire, damsire
+            return sire.replace("\xa0", " ").strip(), damsire.replace("\xa0", " ").strip()
     except:
         pass
     return "", ""
@@ -129,6 +127,8 @@ def scrape_race(race_id, stats):
     df["damsire"] = ""
     df["sire_win_rate"] = 0.08
     df["damsire_win_rate"] = 0.08
+    df["avg_agari"] = 37.0
+    df["avg_last_corner"] = 7.0
     for idx, row in df.iterrows():
         match = find_match(stats.get("jockey_stats", pd.DataFrame()), "jockey", row["jockey"])
         if match is not None:
@@ -138,6 +138,10 @@ def scrape_race(race_id, stats):
         if match is not None:
             df.loc[idx, "trainer_avg_rank"] = match["trainer_avg_rank"]
             df.loc[idx, "trainer_win_rate"] = match["trainer_win_rate"]
+        match = find_match(stats.get("horse_stats", pd.DataFrame()), "horse_name", row["horse_name"])
+        if match is not None:
+            df.loc[idx, "avg_agari"] = match["avg_agari"]
+            df.loc[idx, "avg_last_corner"] = match["avg_last_corner"]
         sire, damsire = get_pedigree(row["horse_id"])
         df.loc[idx, "sire"] = sire
         df.loc[idx, "damsire"] = damsire
@@ -148,8 +152,6 @@ def scrape_race(race_id, stats):
         match = find_match(stats.get("damsire_stats", pd.DataFrame()), "damsire", damsire)
         if match is not None:
             df.loc[idx, "damsire_win_rate"] = match["damsire_win_rate"]
-    df["avg_agari"] = 37.0
-    df["avg_last_corner"] = 7.0
     df["sire_venue_win"] = df["sire_win_rate"]
     df["sire_dist_win"] = df["sire_win_rate"]
     df["damsire_venue_win"] = df["damsire_win_rate"]
@@ -175,7 +177,7 @@ def predict_race(models, race_df, venue, surface):
             race_df[c] = 0
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
-    result = race_df[["horse_name", "jockey", "umaban", "sire"]].copy()
+    result = race_df[["horse_name", "jockey", "umaban", "avg_agari"]].copy()
     result["score"] = scores
     result["rank"] = result["score"].rank(ascending=False).astype(int)
     return result.sort_values("rank"), model_type
@@ -205,7 +207,7 @@ if st.button("予想する", type="primary"):
             label = "芝" if info["surface"] == "turf" else "ダート"
             st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
             st.write("確認:")
-            cols = ["horse_name", "jockey_avg_rank", "sire", "sire_win_rate"]
+            cols = ["horse_name", "avg_agari", "jockey_avg_rank", "sire_win_rate"]
             st.dataframe(info["horses"][cols].head(8))
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
