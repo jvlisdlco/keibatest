@@ -94,22 +94,21 @@ def scrape_race(race_id):
                   "06":"中山","07":"中京","08":"京都","09":"阪神","10":"小倉"}
         venue = venues.get(race_id[4:6], "不明")
 
-    　　 horses = []
-for row in soup.select("tr.HorseList"):
-    name = row.select_one(".HorseName a")
-    jockey = row.select_one(".Jockey a")
-    tds = row.select("td")
-    if name:
-        # 馬番は通常2番目のtd
-        umaban = tds[1].get_text(strip=True) if len(tds) > 1 else ""
-        wakuban = tds[0].get_text(strip=True) if tds else ""
-        horses.append({
-            "horse_name": name.get_text(strip=True),
-            "jockey": jockey.get_text(strip=True) if jockey else "",
-            "frame": wakuban,      # 枠番
-            "umaban": umaban,      # 馬番
-            "distance": distance
-        })
+        horses = []
+        for row in soup.select("tr.HorseList"):
+            name = row.select_one(".HorseName a")
+            jockey = row.select_one(".Jockey a")
+            tds = row.select("td")
+            if name:
+                umaban = tds[1].get_text(strip=True) if len(tds) > 1 else ""
+                wakuban = tds[0].get_text(strip=True) if tds else ""
+                horses.append({
+                    "horse_name": name.get_text(strip=True),
+                    "jockey": jockey.get_text(strip=True) if jockey else "",
+                    "frame": wakuban,
+                    "umaban": umaban,
+                    "distance": distance
+                })
         
         if not horses:
             return None, "出走馬なし"
@@ -155,16 +154,16 @@ if st.button("取得して予想", type="primary"):
             
             result, model_type = predict_race(models, info["horses"], info["venue"], info["surface"])
             
-if result is not None:
-    st.subheader(f"予想（{model_type}）")
-    for _, row in result.iterrows():
-        r = int(row["rank"])
-        umaban = row.get("umaban", "")
-        name = row["horse_name"]
-        jockey = row["jockey"]
-        if r <= 3:
-            st.markdown(f"### {r}位: {umaban}番 {name}（{jockey}）")
-        else:
-            st.markdown(f"{r}位: {umaban}番 {name}（{jockey}）")
+            if result is not None:
+                st.subheader(f"予想（{model_type}）")
+                for _, row in result.iterrows():
+                    r = int(row["rank"])
+                    umaban = row["umaban"] if "umaban" in row else ""
+                    name = row["horse_name"]
+                    jockey = row["jockey"]
+                    if r <= 3:
+                        st.markdown(f"### {r}位: {umaban}番 {name}（{jockey}）")
+                    else:
+                        st.markdown(f"{r}位: {umaban}番 {name}（{jockey}）")
             else:
                 st.error(model_type)
