@@ -91,4 +91,83 @@ def scrape_race(race_id, stats):
                 match = js[js["jockey"].astype(str).str.contains(jname, na=False, regex=False)]
                 if len(match) > 0:
                     df.loc[idx, "jockey_avg_rank"] = match.iloc[0]["jockey_avg_rank"]
-                    df.loc[idx, "jockey_win_rate"] = match.iloc[0]["
+                    df.loc[idx, "jockey_win_rate"] = match.iloc[0]["jockey_win_rate"]
+    ts = stats.get("trainer_stats", pd.DataFrame())
+    if len(ts) > 0:
+        for idx, row in df.iterrows():
+            tname = str(row["trainer"])
+            if tname:
+                match = ts[ts["trainer"].astype(str).str.contains(tname, na=False, regex=False)]
+                if len(match) > 0:
+                    df.loc[idx, "trainer_avg_rank"] = match.iloc[0]["trainer_avg_rank"]
+                    df.loc[idx, "trainer_win_rate"] = match.iloc[0]["trainer_win_rate"]
+    df["avg_agari"] = 37.0
+    df["avg_last_corner"] = 7.0
+    df["sire_win_rate"] = 0.08
+    df["damsire_win_rate"] = 0.08
+    df["sire_venue_win"] = 0.08
+    df["sire_dist_win"] = 0.08
+    df["damsire_venue_win"] = 0.08
+    df["damsire_dist_win"] = 0.08
+    df["venue_win_rate"] = 0.08
+    df["track_win_rate"] = 0.08
+    df["dist_win_rate"] = 0.08
+    return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
+
+def predict_race(models, race_df, venue, surface):
+    if (venue, surface) in models["venue"]:
+        info = models["venue"][(venue, surface)]
+        model_type = "会場"
+    elif surface in models["national"]:
+        info = models["national"][surface]
+        model_type = "全国"
+    else:
+        return None, "モデルなし"
+    model = info["model"]
+    cols = info["cols"]
+    for c in cols:
+        if c not in race_df.columns:
+            race_df[c] = 0
+    X = race_df[cols].fillna(0).values
+    scores = model.predict(X)
+    result = race_df[["horse_name", "jockey", "umaban"]].copy()
+    result["score"] = scores
+    result["rank"] = result["score"].rank(ascending=False).astype(int)
+    return result.sort_values("rank"), model_type
+
+st.set_page_config(page_title="競馬予想", page_icon="🏇")
+st.title("競馬予想")
+
+try:
+    models = load_models()
+    stats = load_stats()
+    st.sidebar.success("読込完了")
+except Exception as e:
+    st.error(f"エラー: {e}")
+    st.stop()
+
+race_id = st.text_input("レースID", placeholder="202406010101")
+
+if st.button("予想する", type="primary"):
+    if len(race_id) != 12:
+        st.error("12桁で入力")
+    else:
+        with st.spinner("取得中..."):
+            info, err = scrape_race(race_id, stats)
+        if err:
+            st.error(err)
+        else:
+            label = "芝" if info["surface"] == "turf" else "ダート"
+            st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
+            result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
+            if result is not None:
+                st.subheader(f"予想（{mtype}）")
+                for _, row in result.iterrows():
+                    r = int(row["rank"])
+                    text = f"{r}位: {row['umaban']}番 {row['horse_name']}（{row['jockey']}）"
+                    if r <= 3:
+                        st.markdown(f"### {text}")
+                    else:
+                        st.markdown(text)
+            else:
+                st.error(mtype)
