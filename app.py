@@ -53,7 +53,7 @@ def load_stats():
 def get_horse_history(horse_id):
     if not horse_id:
         return 37.0, 7.0
-    url = f"https://db.netkeiba.com/horse/{horse_id}"
+    url = f"https://db.netkeiba.com/horse/result/{horse_id}"
     try:
         resp = requests.get(url, headers=HEADERS, timeout=8)
         resp.encoding = "euc-jp"
@@ -63,24 +63,30 @@ def get_horse_history(horse_id):
             return 37.0, 7.0
         agari_list = []
         corner_list = []
-        for row in table.select("tr")[1:6]:
+        for row in table.select("tr")[1:10]:
             tds = row.select("td")
-            if len(tds) < 12:
+            if len(tds) < 28:
                 continue
-            agari_text = tds[11].get_text(strip=True) if len(tds) > 11 else ""
-            corner_text = tds[10].get_text(strip=True) if len(tds) > 10 else ""
+            race_name = tds[4].get_text(strip=True) if len(tds) > 4 else ""
+            if "障" in race_name:
+                continue
+            agari_text = tds[27].get_text(strip=True)
+            corner_text = tds[25].get_text(strip=True)
             try:
                 if agari_text and agari_text != "-":
-                    agari_list.append(float(agari_text))
+                    val = float(agari_text)
+                    if 30 <= val <= 45:
+                        agari_list.append(val)
             except:
                 pass
             try:
-                if corner_text:
+                if corner_text and "-" in corner_text:
                     parts = corner_text.split("-")
-                    if parts:
-                        corner_list.append(int(parts[-1]))
+                    corner_list.append(int(parts[-1]))
             except:
                 pass
+            if len(agari_list) >= 5:
+                break
         avg_agari = sum(agari_list) / len(agari_list) if agari_list else 37.0
         avg_corner = sum(corner_list) / len(corner_list) if corner_list else 7.0
         return avg_agari, avg_corner
