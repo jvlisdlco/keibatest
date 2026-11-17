@@ -41,7 +41,11 @@ def load_stats():
     for name in ["jockey_stats", "trainer_stats", "sire_stats", "damsire_stats"]:
         path = f"{PIPELINE_DIR}/{name}.csv"
         if os.path.exists(path):
-            stats[name] = pd.read_csv(path)
+            df = pd.read_csv(path)
+            for col in df.columns:
+                if df[col].dtype == object:
+                    df[col] = df[col].astype(str).str.replace("\xa0", " ").str.strip()
+            stats[name] = df
         else:
             stats[name] = pd.DataFrame()
     return stats
@@ -59,6 +63,8 @@ def get_pedigree(horse_id):
             links = blood.select("a")
             sire = links[0].get_text(strip=True) if len(links) > 0 else ""
             damsire = links[4].get_text(strip=True) if len(links) > 4 else ""
+            sire = sire.replace("\xa0", " ").strip()
+            damsire = damsire.replace("\xa0", " ").strip()
             return sire, damsire
     except:
         pass
@@ -67,10 +73,10 @@ def get_pedigree(horse_id):
 def find_match(df_stats, col_name, search_name):
     if len(df_stats) == 0 or not search_name:
         return None
-    search_name = str(search_name).strip()
+    search_clean = str(search_name).replace("\xa0", " ").replace(" ", "").strip()
     for idx, row in df_stats.iterrows():
-        stat_name = str(row[col_name]).strip()
-        if search_name in stat_name or stat_name in search_name:
+        stat_name = str(row[col_name]).replace("\xa0", " ").replace(" ", "").strip()
+        if search_clean in stat_name or stat_name in search_clean:
             return row
     return None
 
@@ -191,7 +197,7 @@ if st.button("予想する", type="primary"):
     if len(race_id) != 12:
         st.error("12桁で入力")
     else:
-        with st.spinner("取得中（血統含む）..."):
+        with st.spinner("取得中..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
