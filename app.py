@@ -73,35 +73,60 @@ def scrape_race(race_id):
     url = f"https://race.netkeiba.com/race/shutuba.html?race_id={race_id}"
     try:
         resp = requests.get(url, headers=HEADERS, timeout=10)
-        resp.encoding = "euc-jp"
+        
+        # エンコーディングを自動判定
+        resp.encoding = resp.apparent_encoding
+        if resp.encoding is None or resp.encoding.lower() in ["ascii", "windows-1252"]:
+            resp.encoding = "euc-jp"
+        
         soup = BeautifulSoup(resp.text, "html.parser")
         
+        # レース名
         race_name_elem = soup.select_one(".RaceName")
         race_name = race_name_elem.get_text(strip=True) if race_name_elem else "不明"
         
+        # レースデータ
         race_data = soup.select_one(".RaceData01")
         race_data_text = race_data.get_text() if race_data else ""
         
-        surface = "dirt" if ("ダート" in race_data_text or "ダ" in race_data_text) else "turf"
+        # 芝/ダート
+        if "ダート" in race_data_text or "ダ" in race_data_text:
+            surface = "dirt"
+        else:
+            surface = "turf"
         
+        # 距離
         dist_match = re.search(r"(\d+)m", race_data_text)
         distance = int(dist_match.group(1)) if dist_match else 1600
         
-        venue_map = {"01": "札幌", "02": "函館", "03": "福島", "04": "新潟", "05": "東京", 
-                     "06": "中山", "07": "中京", "08": "京都", "09": "阪神", "10": "小倉"}
+        # 会場
+        venue_map = {
+            "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
+            "05": "東京", "06": "中山", "07": "中京", "08": "京都",
+            "09": "阪神", "10": "小倉"
+        }
         venue = venue_map.get(race_id[4:6], "不明")
         
+        # 出走馬
         horses = []
         for row in soup.select("tr.HorseList"):
             try:
                 name_elem = row.select_one(".HorseName a")
                 horse_name = name_elem.get_text(strip=True) if name_elem else ""
+                
                 jockey_elem = row.select_one(".Jockey a")
                 jockey = jockey_elem.get_text(strip=True) if jockey_elem else ""
+                
                 tds = row.select("td")
                 frame = tds[0].get_text(strip=True) if tds else "0"
+                
                 if horse_name:
-                    horses.append({"horse_name": horse_name, "jockey": jockey, "frame": frame, "distance": distance})
+                    horses.append({
+                        "horse_name": horse_name,
+                        "jockey": jockey,
+                        "frame": frame,
+                        "distance": distance
+                    })
             except:
                 continue
         
@@ -112,7 +137,14 @@ def scrape_race(race_id):
         df["frame_num"] = pd.to_numeric(df["frame"], errors="coerce").fillna(0)
         df["frame_rank"] = df["frame_num"].rank(method="average")
         
-        return {"race_name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
+        return {
+            "race_name": race_name,
+            "venue": venue,
+            "surface": surface,
+            "distance": distance,
+            "horses": df
+        }, None
+        
     except Exception as e:
         return None, str(e)
 
