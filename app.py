@@ -127,8 +127,29 @@ def scrape_race(race_id, stats):
         df["damsire"] = damsires
         
         # 成績マージ
+         # 成績マージ（部分一致）
+        df["jockey_avg_rank"] = 8.0
+        df["jockey_win_rate"] = 0.08
+        df["trainer_avg_rank"] = 8.0
+        df["trainer_win_rate"] = 0.08
+        
         if len(stats["jockey_stats"]) > 0:
-            df = df.merge(stats["jockey_stats"], on="jockey", how="left")
+            for idx, row in df.iterrows():
+                jockey_name = str(row["jockey"])
+                if jockey_name:
+                    match = stats["jockey_stats"][stats["jockey_stats"]["jockey"].astype(str).str.contains(jockey_name, na=False, regex=False)]
+                    if len(match) > 0:
+                        df.loc[idx, "jockey_avg_rank"] = match.iloc[0]["jockey_avg_rank"]
+                        df.loc[idx, "jockey_win_rate"] = match.iloc[0]["jockey_win_rate"]
+        
+        if len(stats["trainer_stats"]) > 0:
+            for idx, row in df.iterrows():
+                trainer_name = str(row["trainer"])
+                if trainer_name:
+                    match = stats["trainer_stats"][stats["trainer_stats"]["trainer"].astype(str).str.contains(trainer_name, na=False, regex=False)]
+                    if len(match) > 0:
+                        df.loc[idx, "trainer_avg_rank"] = match.iloc[0]["trainer_avg_rank"]
+                        df.loc[idx, "trainer_win_rate"] = match.iloc[0]["trainer_win_rate"]
         if len(stats["trainer_stats"]) > 0:
             df = df.merge(stats["trainer_stats"], on="trainer", how="left")
         if len(stats["sire_stats"]) > 0:
