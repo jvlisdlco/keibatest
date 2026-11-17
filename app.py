@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import lightgbm as lgb
+import time
 
 PIPELINE_DIR = "pipeline"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
@@ -37,13 +38,33 @@ def load_models():
 @st.cache_data
 def load_stats():
     stats = {}
-    for name in ["jockey_stats", "trainer_stats"]:
+    for name in ["jockey_stats", "trainer_stats", "sire_stats", "damsire_stats"]:
         path = f"{PIPELINE_DIR}/{name}.csv"
         if os.path.exists(path):
             stats[name] = pd.read_csv(path)
         else:
             stats[name] = pd.DataFrame()
     return stats
+
+def get_pedigree(horse_id):
+    if not horse_id:
+        return "", ""
+    url = f"https://db.netkeiba.com/horse/ped/{horse_id}"
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=8)
+        resp.encoding = "euc-jp"
+        soup = BeautifulSoup(resp.text, "html.parser")
+        blood = soup.select_one(".blood_table")
+        if blood:
+            links = blood.select("a")
+            sire = links[0].get_text(strip=True) if len(links) > 0 else ""
+            damsire = ""
+            if len(links) > 4:
+                damsire = links[4].get_text(strip=True)
+            return sire, damsire
+    except:
+        pass
+    return "", ""
 
 def scrape_race(race_id, stats):
     url = f"https://race.netkeiba.com/race/shutuba.html?race_id={race_id}"
@@ -66,8 +87,13 @@ def scrape_race(race_id, stats):
         trainer_elem = row.select_one(".Trainer a")
         tds = row.select("td")
         if name_elem:
+            href = name_elem.get("href", "")
+            horse_id = ""
+            if "/horse/" in href:
+                horse_id = href.split("/horse/")[-1].split("/")[0]
             horses.append({
                 "horse_name": name_elem.get_text(strip=True),
+                "horse_id": horse_id,
                 "jockey": jockey_elem.get_text(strip=True) if jockey_elem else "",
                 "trainer": trainer_elem.get_text(strip=True) if trainer_elem else "",
                 "frame": tds[0].get_text(strip=True) if tds else "0",
@@ -83,6 +109,10 @@ def scrape_race(race_id, stats):
     df["jockey_win_rate"] = 0.08
     df["trainer_avg_rank"] = 8.0
     df["trainer_win_rate"] = 0.08
+    df["sire"] = ""
+    df["damsire"] = ""
+    df["sire_win_rate"] = 0.08
+    df["damsire_win_rate"] = 0.08
     js = stats.get("jockey_stats", pd.DataFrame())
     if len(js) > 0:
         for idx, row in df.iterrows():
@@ -101,14 +131,33 @@ def scrape_race(race_id, stats):
                 if len(match) > 0:
                     df.loc[idx, "trainer_avg_rank"] = match.iloc[0]["trainer_avg_rank"]
                     df.loc[idx, "trainer_win_rate"] = match.iloc[0]["trainer_win_rate"]
+    for idx, row in df.iterrows():
+        sire, damsire = get_pedigree(row["horse_id"])
+        df.loc[idx, "sire"] = sire
+        df.loc[idx, "damsire"] = damsire
+        time.sleep(0.2)
+    ss = stats.get("sire_stats", pd.DataFrame())
+    if len(ss) > 0:
+        for idx, row in df.iterrows():
+            sname = str(row["sire"])
+            if sname:
+                match = ss[ss["sire"].astype(str).str.contains(sname, na=False, regex=False)]
+                if len(match) > 0:
+                    df.loc[idx, "sire_win_rate"] = match.iloc[0]["sire_win_rate"]
+    ds = stats.get("damsire_stats", pd.DataFrame())
+    if len(ds) > 0:
+        for idx, row in df.iterrows():
+            dname = str(row["damsire"])
+            if dname:
+                match = ds[ds["damsire"].astype(str).str.contains(dname, na=False, regex=False)]
+                if len(match) > 0:
+                    df.loc[idx, "damsire_win_rate"] = match.iloc[0]["damsire_win_rate"]
     df["avg_agari"] = 37.0
     df["avg_last_corner"] = 7.0
-    df["sire_win_rate"] = 0.08
-    df["damsire_win_rate"] = 0.08
-    df["sire_venue_win"] = 0.08
-    df["sire_dist_win"] = 0.08
-    df["damsire_venue_win"] = 0.08
-    df["damsire_dist_win"] = 0.08
+    df["sire_venue_win"] = df["sire_win_rate"]
+    df["sire_dist_win"] = df["sire_win_rate"]
+    df["damsire_venue_win"] = df["damsire_win_rate"]
+    df["damsire_dist_win"] = df["damsire_win_rate"]
     df["venue_win_rate"] = 0.08
     df["track_win_rate"] = 0.08
     df["dist_win_rate"] = 0.08
@@ -130,7 +179,7 @@ def predict_race(models, race_df, venue, surface):
             race_df[c] = 0
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
-    result = race_df[["horse_name", "jockey", "umaban"]].copy()
+    result = race_df[["horse_name", "jockey", "umaban", "sire"]].copy()
     result["score"] = scores
     result["rank"] = result["score"].rank(ascending=False).astype(int)
     return result.sort_values("rank"), model_type
@@ -152,22 +201,22 @@ if st.button("予想する", type="primary"):
     if len(race_id) != 12:
         st.error("12桁で入力")
     else:
-        with st.spinner("取得中..."):
+        with st.spinner("血統取得中（30秒程度）..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
             st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
-            st.write("騎手成績:")
-            show_cols = ["horse_name", "jockey", "jockey_avg_rank"]
-            st.dataframe(info["horses"][show_cols].head(10))
+            st.write("確認:")
+            show_cols = ["horse_name", "jockey_avg_rank", "sire", "sire_win_rate"]
+            st.dataframe(info["horses"][show_cols].head(8))
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想（{mtype}）")
                 for _, row in result.iterrows():
                     r = int(row["rank"])
-                    text = f"{r}位: {row['umaban']}番 {row['horse_name']}（{row['jockey']}）"
+                    text = f"{r}位: {row['umaban']}番 {row['horse_name']}"
                     if r <= 3:
                         st.markdown(f"### {text}")
                     else:
