@@ -212,7 +212,17 @@ if st.button("予想する", type="primary"):
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
             st.info(f"**{info['name']}** / {info['venue']} {label} {info['distance']}m")
+            label = "芝" if info["surface"] == "turf" else "ダート"
+            st.info(f"**{info['name']}** / {info['venue']} {label} {info['distance']}m")
             
+            # ===== ここから追加 =====
+            st.write("=== 特徴量確認 ===")
+            debug_cols = ["horse_name", "jockey", "jockey_avg_rank", "sire", "sire_win_rate"]
+            available = [c for c in debug_cols if c in info["horses"].columns]
+            st.dataframe(info["horses"][available])
+            # ===== ここまで追加 =====
+            
+            result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])            
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             
             if result is not None:
