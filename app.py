@@ -174,9 +174,6 @@ def scrape_race(race_id, stats):
     df["damsire_win_rate"] = 0.08
     df["avg_agari"] = 36.5
     df["avg_last_corner"] = 6.0
-    df["venue_win_rate"] = 0.08
-    df["track_win_rate"] = 0.08
-    df["dist_win_rate"] = 0.08
     horse_stats = stats.get("horse_stats", pd.DataFrame())
     for idx, row in df.iterrows():
         match = find_match(stats.get("jockey_stats", pd.DataFrame()), "jockey", row["jockey"])
@@ -214,6 +211,9 @@ def scrape_race(race_id, stats):
     df["sire_dist_win"] = df["sire_win_rate"]
     df["damsire_venue_win"] = df["damsire_win_rate"]
     df["damsire_dist_win"] = df["damsire_win_rate"]
+    df["venue_win_rate"] = 0.08
+    df["track_win_rate"] = 0.08
+    df["dist_win_rate"] = 0.08
     return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
 
 def predict_race(models, race_df, venue, surface):
@@ -232,7 +232,7 @@ def predict_race(models, race_df, venue, surface):
             race_df[c] = 0
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
-    result = race_df[["umaban", "horse_name", "jockey", "avg_agari", "avg_last_corner", "trainer_avg_rank"]].copy()
+    result = race_df[["umaban", "horse_name", "jockey", "avg_agari", "avg_last_corner", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]].copy()
     result["score"] = scores
     result["予想順位"] = result["score"].rank(ascending=False).astype(int)
     return result.sort_values("予想順位"), model_type
@@ -264,14 +264,12 @@ if st.button("予想する", type="primary"):
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想結果（{mtype}モデル）")
-                display = result[["umaban", "horse_name", "jockey", "予想順位", "avg_agari", "avg_last_corner"]].copy()
-st.write("---")
-st.write("特徴量確認:")
-check_cols = ["horse_name", "avg_agari", "avg_last_corner", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]
-st.dataframe(info["horses"][check_cols])
-st.write("統計:")
-st.write(info["horses"][["avg_agari", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]].describe())                
-                display.columns = ["馬番", "馬名", "騎手", "予想順位", "上がり", "通過"]
+                display = result[["umaban", "horse_name", "jockey", "予想順位"]].copy()
+                display.columns = ["馬番", "馬名", "騎手", "予想順位"]
                 st.dataframe(display, hide_index=True)
+                st.write("---")
+                st.write("特徴量確認:")
+                feat_cols = ["horse_name", "avg_agari", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]
+                st.dataframe(result[feat_cols])
             else:
                 st.error(mtype)
