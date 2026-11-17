@@ -6,20 +6,7 @@
     "札幌",
     "東京"
   ],
-  "turf_cols": [
-    "frame_rank",
-    "distance",
-    "jockey_avg_rank",
-    "trainer_avg_rank",
-    "avg_agari",
-    "avg_last_corner",
-    "sire_win_rate",
-    "damsire_win_rate",
-    "sire_venue_win",
-    "sire_dist_win",
-    "damsire_venue_win",
-    "damsire_dist_win"
-  ],
+  "turf_cols": ["frame_rank", "distance", "jockey_avg_rank", "trainer_avg_rank", "avg_agari", "avg_last_corner", "sire_win_rate", "damsire_win_rate"]
   "dirt_cols": [
     "frame_rank",
     "distance",
