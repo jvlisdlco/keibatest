@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
-import pickle
 import json
 import os
 import requests
 from bs4 import BeautifulSoup
 import re
+import lightgbm as lgb
 
 PIPELINE_DIR = "pipeline"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -22,22 +22,22 @@ def load_predictor():
             self.turf_cols = config["turf_cols"]
             self.dirt_cols = config["dirt_cols"]
             
-            for key, path in config["models"]["venue_models"].items():
+            # 会場モデル読み込み（.txt形式）
+            for key in config["models"]["venue_models"].keys():
                 venue, surface = key.rsplit("_", 1)
-                filename = os.path.basename(path)
+                filename = f"model_{venue}_{surface}.txt"
                 full_path = f"{PIPELINE_DIR}/{filename}"
                 if os.path.exists(full_path):
-                    with open(full_path, "rb") as f:
-                        model = pickle.load(f)
+                    model = lgb.Booster(model_file=full_path)
                     cols = self.turf_cols if surface == "turf" else self.dirt_cols
                     self.venue_models[(venue, surface)] = {"model": model, "cols": cols}
             
-            for surface, path in config["models"]["national_models"].items():
-                filename = os.path.basename(path)
+            # 全国モデル読み込み
+            for surface in config["models"]["national_models"].keys():
+                filename = f"model_national_{surface}.txt"
                 full_path = f"{PIPELINE_DIR}/{filename}"
                 if os.path.exists(full_path):
-                    with open(full_path, "rb") as f:
-                        model = pickle.load(f)
+                    model = lgb.Booster(model_file=full_path)
                     cols = self.turf_cols if surface == "turf" else self.dirt_cols
                     self.national_models[surface] = {"model": model, "cols": cols}
         
@@ -60,7 +60,7 @@ def load_predictor():
                     race_df[c] = 0
             
             X = race_df[cols].fillna(0)
-            scores = model.predict(X)
+            scores = model.predict(X.values)
             
             result = race_df[["horse_name", "jockey", "frame"]].copy()
             result["score"] = scores
@@ -73,60 +73,35 @@ def scrape_race(race_id):
     url = f"https://race.netkeiba.com/race/shutuba.html?race_id={race_id}"
     try:
         resp = requests.get(url, headers=HEADERS, timeout=10)
-        
-        # エンコーディングを自動判定
-        resp.encoding = resp.apparent_encoding
-        if resp.encoding is None or resp.encoding.lower() in ["ascii", "windows-1252"]:
-            resp.encoding = "euc-jp"
-        
+        resp.encoding = resp.apparent_encoding or "euc-jp"
         soup = BeautifulSoup(resp.text, "html.parser")
         
-        # レース名
         race_name_elem = soup.select_one(".RaceName")
         race_name = race_name_elem.get_text(strip=True) if race_name_elem else "不明"
         
-        # レースデータ
         race_data = soup.select_one(".RaceData01")
         race_data_text = race_data.get_text() if race_data else ""
         
-        # 芝/ダート
-        if "ダート" in race_data_text or "ダ" in race_data_text:
-            surface = "dirt"
-        else:
-            surface = "turf"
+        surface = "dirt" if ("ダート" in race_data_text or "ダ" in race_data_text) else "turf"
         
-        # 距離
         dist_match = re.search(r"(\d+)m", race_data_text)
         distance = int(dist_match.group(1)) if dist_match else 1600
         
-        # 会場
-        venue_map = {
-            "01": "札幌", "02": "函館", "03": "福島", "04": "新潟",
-            "05": "東京", "06": "中山", "07": "中京", "08": "京都",
-            "09": "阪神", "10": "小倉"
-        }
+        venue_map = {"01": "札幌", "02": "函館", "03": "福島", "04": "新潟", "05": "東京",
+                     "06": "中山", "07": "中京", "08": "京都", "09": "阪神", "10": "小倉"}
         venue = venue_map.get(race_id[4:6], "不明")
         
-        # 出走馬
         horses = []
         for row in soup.select("tr.HorseList"):
             try:
                 name_elem = row.select_one(".HorseName a")
                 horse_name = name_elem.get_text(strip=True) if name_elem else ""
-                
                 jockey_elem = row.select_one(".Jockey a")
                 jockey = jockey_elem.get_text(strip=True) if jockey_elem else ""
-                
                 tds = row.select("td")
                 frame = tds[0].get_text(strip=True) if tds else "0"
-                
                 if horse_name:
-                    horses.append({
-                        "horse_name": horse_name,
-                        "jockey": jockey,
-                        "frame": frame,
-                        "distance": distance
-                    })
+                    horses.append({"horse_name": horse_name, "jockey": jockey, "frame": frame, "distance": distance})
             except:
                 continue
         
@@ -137,14 +112,7 @@ def scrape_race(race_id):
         df["frame_num"] = pd.to_numeric(df["frame"], errors="coerce").fillna(0)
         df["frame_rank"] = df["frame_num"].rank(method="average")
         
-        return {
-            "race_name": race_name,
-            "venue": venue,
-            "surface": surface,
-            "distance": distance,
-            "horses": df
-        }, None
-        
+        return {"race_name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
     except Exception as e:
         return None, str(e)
 
@@ -160,7 +128,7 @@ except Exception as e:
     st.stop()
 
 st.subheader("レースIDを入力")
-st.caption("netkeibaのURL末尾12桁（例: 202406010101）")
+st.caption("netkeibaのURL末尾12桁")
 
 race_id = st.text_input("レースID", placeholder="202406010101")
 
@@ -180,7 +148,6 @@ if "race_info" in st.session_state:
     info = st.session_state["race_info"]
     surface_label = "芝" if info["surface"] == "turf" else "ダート"
     st.info(f"**{info['race_name']}** / {info['venue']} {surface_label} {info['distance']}m")
-    
     st.dataframe(info["horses"][["horse_name", "jockey", "frame"]], hide_index=True)
     
     if st.button("予想する", type="primary"):
