@@ -214,10 +214,10 @@ def predict_race(models, race_df, venue, surface):
             race_df[c] = 0
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
-    result = race_df[["horse_name", "jockey", "umaban", "avg_agari"]].copy()
+    result = race_df[["umaban", "horse_name", "jockey", "avg_agari"]].copy()
     result["score"] = scores
-    result["rank"] = result["score"].rank(ascending=False).astype(int)
-    return result.sort_values("rank"), model_type
+    result["予想順位"] = result["score"].rank(ascending=False).astype(int)
+    return result.sort_values("予想順位"), model_type
 
 st.set_page_config(page_title="競馬予想", page_icon="🏇")
 st.title("競馬予想")
@@ -236,25 +236,18 @@ if st.button("予想する", type="primary"):
     if len(race_id) != 12:
         st.error("12桁で入力")
     else:
-        with st.spinner("過去成績取得中..."):
+        with st.spinner("取得中..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
             st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
-            st.write("確認:")
-            cols = ["horse_name", "avg_agari", "jockey_avg_rank", "sire_win_rate"]
-            st.dataframe(info["horses"][cols])
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
-                st.subheader(f"予想（{mtype}）")
-                for _, row in result.iterrows():
-                    r = int(row["rank"])
-                    text = f"{r}位: {row['umaban']}番 {row['horse_name']}"
-                    if r <= 3:
-                        st.markdown(f"### {text}")
-                    else:
-                        st.markdown(text)
+                st.subheader(f"予想結果（{mtype}モデル）")
+                display = result[["umaban", "horse_name", "jockey", "予想順位", "avg_agari"]].copy()
+                display.columns = ["馬番", "馬名", "騎手", "予想順位", "上がり"]
+                st.dataframe(display, hide_index=True)
             else:
                 st.error(mtype)
