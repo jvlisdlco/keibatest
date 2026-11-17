@@ -64,7 +64,7 @@ def predict_race(models, race_df, venue, surface):
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
     
-    result = race_df[["horse_name", "jockey", "frame"]].copy()
+    result = race_df[["horse_name", "jockey", "frame", "umaban"]].copy()
     result["score"] = scores
     result["rank"] = result["score"].rank(ascending=False).astype(int)
     return result.sort_values("rank"), model_type
@@ -94,8 +94,7 @@ def scrape_race(race_id):
                   "06":"中山","07":"中京","08":"京都","09":"阪神","10":"小倉"}
         venue = venues.get(race_id[4:6], "不明")
 
-        
-        horses = []
+    　　 horses = []
 for row in soup.select("tr.HorseList"):
     name = row.select_one(".HorseName a")
     jockey = row.select_one(".Jockey a")
@@ -156,13 +155,16 @@ if st.button("取得して予想", type="primary"):
             
             result, model_type = predict_race(models, info["horses"], info["venue"], info["surface"])
             
-            if result is not None:
-                st.subheader(f"予想（{model_type}）")
-                for _, row in result.iterrows():
-                    r = int(row["rank"])
-                    if r <= 3:
-                        st.markdown(f"### {r}位: {row['horse_name']}")
-                    else:
-                        st.markdown(f"{r}位: {row['horse_name']}")
+if result is not None:
+    st.subheader(f"予想（{model_type}）")
+    for _, row in result.iterrows():
+        r = int(row["rank"])
+        umaban = row.get("umaban", "")
+        name = row["horse_name"]
+        jockey = row["jockey"]
+        if r <= 3:
+            st.markdown(f"### {r}位: {umaban}番 {name}（{jockey}）")
+        else:
+            st.markdown(f"{r}位: {umaban}番 {name}（{jockey}）")
             else:
                 st.error(model_type)
