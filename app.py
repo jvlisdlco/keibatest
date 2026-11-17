@@ -232,7 +232,7 @@ def predict_race(models, race_df, venue, surface):
             race_df[c] = 0
     X = race_df[cols].fillna(0).values
     scores = model.predict(X)
-    result = race_df[["umaban", "horse_name", "jockey", "avg_agari", "avg_last_corner", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]].copy()
+    result = race_df[["umaban", "horse_name", "jockey"]].copy()
     result["score"] = scores
     result["予想順位"] = result["score"].rank(ascending=False).astype(int)
     return result.sort_values("予想順位"), model_type
@@ -244,6 +244,8 @@ try:
     models = load_models()
     stats = load_stats()
     st.sidebar.success("読込完了")
+    st.sidebar.write(f"会場モデル数: {len(models['venue'])}")
+    st.sidebar.write(f"全国モデル数: {len(models['national'])}")
 except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
@@ -264,12 +266,9 @@ if st.button("予想する", type="primary"):
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想結果（{mtype}モデル）")
+                st.write(f"会場: {info['venue']} / 使用モデル: {mtype}")
                 display = result[["umaban", "horse_name", "jockey", "予想順位"]].copy()
                 display.columns = ["馬番", "馬名", "騎手", "予想順位"]
                 st.dataframe(display, hide_index=True)
-                st.write("---")
-                st.write("特徴量確認:")
-                feat_cols = ["horse_name", "avg_agari", "jockey_avg_rank", "trainer_avg_rank", "sire_win_rate"]
-                st.dataframe(result[feat_cols])
             else:
                 st.error(mtype)
