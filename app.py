@@ -50,6 +50,43 @@ def load_stats():
             stats[name] = pd.DataFrame()
     return stats
 
+def get_horse_history(horse_id):
+    if not horse_id:
+        return 37.0, 7.0
+    url = f"https://db.netkeiba.com/horse/{horse_id}"
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=8)
+        resp.encoding = "euc-jp"
+        soup = BeautifulSoup(resp.content, "html.parser", from_encoding="euc-jp")
+        table = soup.select_one("table.db_h_race_results")
+        if not table:
+            return 37.0, 7.0
+        agari_list = []
+        corner_list = []
+        for row in table.select("tr")[1:6]:
+            tds = row.select("td")
+            if len(tds) < 15:
+                continue
+            agari_text = tds[11].get_text(strip=True) if len(tds) > 11 else ""
+            corner_text = tds[10].get_text(strip=True) if len(tds) > 10 else ""
+            try:
+                if agari_text and agari_text != "-":
+                    agari_list.append(float(agari_text))
+            except:
+                pass
+            try:
+                if corner_text:
+                    parts = corner_text.split("-")
+                    if parts:
+                        corner_list.append(int(parts[-1]))
+            except:
+                pass
+        avg_agari = sum(agari_list) / len(agari_list) if agari_list else 37.0
+        avg_corner = sum(corner_list) / len(corner_list) if corner_list else 7.0
+        return avg_agari, avg_corner
+    except:
+        return 37.0, 7.0
+
 def get_pedigree(horse_id):
     if not horse_id:
         return "", ""
@@ -138,10 +175,10 @@ def scrape_race(race_id, stats):
         if match is not None:
             df.loc[idx, "trainer_avg_rank"] = match["trainer_avg_rank"]
             df.loc[idx, "trainer_win_rate"] = match["trainer_win_rate"]
-        match = find_match(stats.get("horse_stats", pd.DataFrame()), "horse_name", row["horse_name"])
-        if match is not None:
-            df.loc[idx, "avg_agari"] = match["avg_agari"]
-            df.loc[idx, "avg_last_corner"] = match["avg_last_corner"]
+        avg_agari, avg_corner = get_horse_history(row["horse_id"])
+        df.loc[idx, "avg_agari"] = avg_agari
+        df.loc[idx, "avg_last_corner"] = avg_corner
+        time.sleep(0.2)
         sire, damsire = get_pedigree(row["horse_id"])
         df.loc[idx, "sire"] = sire
         df.loc[idx, "damsire"] = damsire
@@ -199,7 +236,7 @@ if st.button("予想する", type="primary"):
     if len(race_id) != 12:
         st.error("12桁で入力")
     else:
-        with st.spinner("取得中..."):
+        with st.spinner("過去成績取得中（1分程度）..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
