@@ -398,48 +398,46 @@ if predict_btn:
                 partners = result.nlargest(4, "place_tendency")
                 partner_names = set(partners["horse_name"])
                 axis_names = set(axis_candidates["horse_name"])
+                ichioshi_names = axis_names & partner_names
                 col_left, col_right = st.columns(2)
                 with col_left:
                     st.markdown("<div class='section-title'>🎯 本命</div>", unsafe_allow_html=True)
                     for _, row in axis_candidates.iterrows():
-                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in partner_names)
+                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in ichioshi_names)
                 with col_right:
                     st.markdown("<div class='section-title'>🤝 相手</div>", unsafe_allow_html=True)
                     for _, row in partners.iterrows():
-                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in axis_names)
+                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in ichioshi_names)
                 st.markdown("<div class='section-title'>💰 買い目</div>", unsafe_allow_html=True)
                 axis_nums = [str(x) for x in axis_candidates["umaban"].tolist()]
                 partner_nums = [str(x) for x in partners["umaban"].tolist()]
-                ichioshi = sorted(list(set(axis_nums) & set(partner_nums)))
-                others = sorted(list(set(axis_nums + partner_nums) - set(ichioshi)))
-                all_nums = sorted(ichioshi[:3] + others[:1])
-                n = len(all_nums)
-                wide_points = n * (n - 1) // 2
-                umaren_points = n * (n - 1) // 2
-                sanren_points = n * (n - 1) * (n - 2) // 6 if n >= 3 else 0
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    if len(ichioshi) >= 3:
-                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{', '.join(all_nums)}（{wide_points}点）</div>", unsafe_allow_html=True)
-                    elif len(ichioshi) == 2:
-                        axis_str = ', '.join(ichioshi[:2])
-                        other_str = ', '.join(others[:3])
-                        points = 2 * min(3, len(others))
-                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_str} → {other_str}（{points}点）</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
-                with col_b:
-                    if len(ichioshi) >= 3:
-                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{', '.join(all_nums)}（{umaren_points}点）</div>", unsafe_allow_html=True)
-                    elif len(ichioshi) == 2:
-                        axis_str = ', '.join(ichioshi[:2])
-                        other_str = ', '.join(others[:3])
-                        points = 2 * min(3, len(others))
-                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {other_str}（{points}点）</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
-                if len(ichioshi) >= 3:
-                    st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複 BOX</b><br>{', '.join(all_nums)}（{sanren_points}点）</div>", unsafe_allow_html=True)
+                ichioshi_df = axis_candidates[axis_candidates["horse_name"].isin(ichioshi_names)]
+                ichioshi_nums = [str(x) for x in ichioshi_df["umaban"].tolist()]
+                all_axis_nums = set(axis_nums)
+                all_partner_nums = set(partner_nums)
+                all_nums = all_axis_nums | all_partner_nums
+                if len(ichioshi_nums) >= 1:
+                    axis_str = ichioshi_nums[0]
+                    flow_nums = sorted([n for n in all_nums if n != axis_str])
+                    flow_str = ', '.join(flow_nums)
+                    points = len(flow_nums)
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
+                    with col_b:
+                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
+                    if len(flow_nums) >= 2:
+                        sanren_points = len(flow_nums) * (len(flow_nums) - 1) // 2
+                        st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複</b><br>軸 {axis_str} → {flow_str}（{sanren_points}点）</div>", unsafe_allow_html=True)
+                else:
+                    all_sorted = sorted(list(all_nums))
+                    n = len(all_sorted)
+                    wide_points = n * (n - 1) // 2
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{', '.join(all_sorted)}（{wide_points}点）</div>", unsafe_allow_html=True)
+                    with col_b:
+                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{', '.join(all_sorted)}（{wide_points}点）</div>", unsafe_allow_html=True)
                 with st.expander("全馬一覧"):
                     display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
                     display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
