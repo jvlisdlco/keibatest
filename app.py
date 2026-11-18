@@ -11,65 +11,88 @@ import time
 PIPELINE_DIR = "pipeline"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-st.set_page_config(page_title="競馬予想", page_icon="🏇", layout="wide")
+st.set_page_config(page_title="馬券おみくじ", page_icon="🏇", layout="wide")
 
 st.markdown("""
 <style>
+.stApp {
+    background: linear-gradient(180deg, #1a0a0a 0%, #2d1515 50%, #1a0a0a 100%);
+}
 .main-title {
     text-align: center;
-    font-size: 48px;
+    font-size: 42px;
     font-weight: bold;
-    background: linear-gradient(90deg, #e94560, #ffd700);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 8px;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    margin-bottom: 4px;
 }
 .sub-title {
     text-align: center;
-    color: #888;
-    font-size: 16px;
-    margin-bottom: 24px;
+    color: #c9a227;
+    font-size: 14px;
+    letter-spacing: 8px;
+    margin-bottom: 8px;
+}
+.omikuji-box {
+    text-align: center;
+    padding: 24px;
+    margin: 20px auto;
+    max-width: 450px;
+    background: linear-gradient(180deg, #8B0000 0%, #5c0000 100%);
+    border: 3px solid #ffd700;
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
 }
 .stButton > button {
-    background: linear-gradient(90deg, #e94560, #ff6b6b) !important;
-    color: white !important;
+    background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
+    color: #1a0a0a !important;
     font-size: 18px !important;
     font-weight: bold !important;
     border: none !important;
-    border-radius: 25px !important;
+    border-radius: 4px !important;
     padding: 12px 40px !important;
 }
 .horse-card {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 12px;
-    padding: 16px;
-    margin: 8px 0;
-    border-left: 4px solid #e94560;
-}
-.horse-card-star {
-    background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
-    border-radius: 12px;
+    background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
+    border-radius: 8px;
     padding: 16px;
     margin: 8px 0;
     border-left: 4px solid #ffd700;
 }
-.umaban { font-size: 28px; font-weight: bold; color: #e94560; }
+.horse-card-star {
+    background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 8px 0;
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+.umaban { font-size: 28px; font-weight: bold; color: #ff6b6b; }
 .umaban-star { font-size: 28px; font-weight: bold; color: #ffd700; }
 .horse-name { font-size: 18px; color: #eee; margin-left: 12px; }
 .section-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
-    color: #e94560;
+    color: #ffd700;
     margin: 20px 0 10px 0;
     padding-bottom: 8px;
-    border-bottom: 2px solid #e94560;
+    border-bottom: 1px solid #ffd700;
 }
 .bet-box {
-    background: #0f3460;
-    border-radius: 8px;
+    background: #2d1515;
+    border: 1px solid #ffd700;
+    border-radius: 4px;
     padding: 12px 16px;
     margin: 8px 0;
     color: #eee;
+}
+.race-info {
+    text-align: center;
+    padding: 16px;
+    background: #2d1515;
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    margin: 16px 0;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -297,8 +320,12 @@ def render_horse_card(umaban, name, is_star=False):
     else:
         st.markdown(f'<div class="horse-card"><span class="umaban">{umaban}</span><span class="horse-name">{name}</span></div>', unsafe_allow_html=True)
 
-st.markdown("<div class='main-title'>🏇 競馬予想</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>AIが選ぶ、勝ち馬と穴馬</div>", unsafe_allow_html=True)
+st.markdown("""
+<div class='omikuji-box'>
+    <div class='main-title'>🏇 馬券おみくじ</div>
+    <div class='sub-title'>〜 今日の勝ち馬 〜</div>
+</div>
+""", unsafe_allow_html=True)
 
 try:
     models = load_models()
@@ -311,19 +338,19 @@ except Exception as e:
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
-    predict_btn = st.button("🎯 予想する", type="primary", use_container_width=True)
+    predict_btn = st.button("🎋 おみくじを引く", type="primary", use_container_width=True)
 
 if predict_btn:
     if len(race_id) != 12:
         st.error("12桁のレースIDを入力してください")
     else:
-        with st.spinner("データ取得中..."):
+        with st.spinner("占い中..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
-            st.markdown(f"<div style='text-align:center; padding:16px; background:#16213e; border-radius:12px; margin:16px 0;'><span style='font-size:24px; color:#eee;'>{info['name']}</span><br><span style='color:#aaa;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='race-info'><span style='font-size:22px; color:#ffd700;'>{info['name']}</span><br><span style='color:#aaa;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 axis_candidates = result.nsmallest(3, "軸順位")
@@ -332,14 +359,14 @@ if predict_btn:
                 axis_names = set(axis_candidates["horse_name"])
                 col_left, col_right = st.columns(2)
                 with col_left:
-                    st.markdown("<div class='section-title'>🎯 軸候補</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>🎯 本命</div>", unsafe_allow_html=True)
                     for _, row in axis_candidates.iterrows():
                         render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in partner_names)
                 with col_right:
-                    st.markdown("<div class='section-title'>🤝 相手馬</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>🤝 相手</div>", unsafe_allow_html=True)
                     for _, row in partners.iterrows():
                         render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in axis_names)
-                st.markdown("<div class='section-title'>💰 推奨買い目</div>", unsafe_allow_html=True)
+                st.markdown("<div class='section-title'>💰 買い目</div>", unsafe_allow_html=True)
                 axis_nums = axis_candidates["umaban"].tolist()
                 partner_nums = partners["umaban"].tolist()
                 overlap = list(set(axis_nums) & set(partner_nums))
