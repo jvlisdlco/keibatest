@@ -38,7 +38,6 @@ st.markdown("""
     border: none !important;
     border-radius: 25px !important;
     padding: 12px 40px !important;
-    box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4) !important;
 }
 .horse-card {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -53,23 +52,10 @@ st.markdown("""
     padding: 16px;
     margin: 8px 0;
     border-left: 4px solid #ffd700;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
 }
-.umaban {
-    font-size: 28px;
-    font-weight: bold;
-    color: #e94560;
-}
-.umaban-star {
-    font-size: 28px;
-    font-weight: bold;
-    color: #ffd700;
-}
-.horse-name {
-    font-size: 18px;
-    color: #eee;
-    margin-left: 12px;
-}
+.umaban { font-size: 28px; font-weight: bold; color: #e94560; }
+.umaban-star { font-size: 28px; font-weight: bold; color: #ffd700; }
+.horse-name { font-size: 18px; color: #eee; margin-left: 12px; }
 .section-title {
     font-size: 20px;
     font-weight: bold;
@@ -146,19 +132,15 @@ def get_recent_stats(horse_id):
             tds = row.select("td")
             if len(tds) < 12:
                 continue
-            rank_text = tds[11].get_text(strip=True)
             try:
-                rank = int(rank_text)
+                rank = int(tds[11].get_text(strip=True))
                 if 1 <= rank <= 18:
                     ranks.append(rank)
             except:
                 pass
         if not ranks:
             return 8.0, 0.08, 0.25
-        avg_rank = sum(ranks) / len(ranks)
-        win_rate = sum(1 for r in ranks if r == 1) / len(ranks)
-        top3_rate = sum(1 for r in ranks if r <= 3) / len(ranks)
-        return round(avg_rank, 2), round(win_rate, 3), round(top3_rate, 3)
+        return round(sum(ranks)/len(ranks), 2), round(sum(1 for r in ranks if r == 1)/len(ranks), 3), round(sum(1 for r in ranks if r <= 3)/len(ranks), 3)
     except:
         return 8.0, 0.08, 0.25
 
@@ -217,10 +199,169 @@ def scrape_race(race_id, stats):
                 parts = href.split("/horse/")
                 if len(parts) > 1:
                     horse_id = parts[1].split("/")[0]
+            umaban = tds[1].get_text(strip=True) if len(tds) > 1 else ""
             horses.append({
                 "horse_name": name_elem.get_text(strip=True),
                 "horse_id": horse_id,
                 "jockey": jockey_elem.get_text(strip=True) if jockey_elem else "",
                 "trainer": trainer_elem.get_text(strip=True) if trainer_elem else "",
                 "frame": tds[0].get_text(strip=True) if tds else "0",
-                "umaban": tds[1].get_text(strip=True
+                "umaban": umaban,
+                "distance": distance
+            })
+    if not horses:
+        return None, "出走馬なし"
+    df = pd.DataFrame(horses)
+    df["frame_num"] = pd.to_numeric(df["frame"], errors="coerce").fillna(0)
+    df["frame_rank"] = df["frame_num"].rank()
+    df["jockey_avg_rank"] = 8.0
+    df["jockey_win_rate"] = 0.08
+    df["trainer_avg_rank"] = 8.0
+    df["trainer_win_rate"] = 0.08
+    df["sire_win_rate"] = 0.08
+    df["damsire_win_rate"] = 0.08
+    df["recent_avg_rank"] = 8.0
+    df["recent_win_rate"] = 0.08
+    df["recent_top3_rate"] = 0.25
+    for idx, row in df.iterrows():
+        match = find_match(stats.get("jockey_stats", pd.DataFrame()), "jockey", row["jockey"])
+        if match is not None:
+            df.loc[idx, "jockey_avg_rank"] = match.get("jockey_avg_rank", 8.0)
+            df.loc[idx, "jockey_win_rate"] = match.get("jockey_win_rate", 0.08)
+        match = find_match(stats.get("trainer_stats", pd.DataFrame()), "trainer", row["trainer"])
+        if match is not None:
+            df.loc[idx, "trainer_avg_rank"] = match.get("trainer_avg_rank", 8.0)
+            df.loc[idx, "trainer_win_rate"] = match.get("trainer_win_rate", 0.08)
+        recent_rank, recent_win, recent_top3 = get_recent_stats(row["horse_id"])
+        df.loc[idx, "recent_avg_rank"] = recent_rank
+        df.loc[idx, "recent_win_rate"] = recent_win
+        df.loc[idx, "recent_top3_rate"] = recent_top3
+        time.sleep(0.15)
+        sire, damsire = get_pedigree(row["horse_id"])
+        time.sleep(0.1)
+        match = find_match(stats.get("sire_stats", pd.DataFrame()), "sire", sire)
+        if match is not None:
+            df.loc[idx, "sire_win_rate"] = match.get("sire_win_rate", 0.08)
+        match = find_match(stats.get("damsire_stats", pd.DataFrame()), "damsire", damsire)
+        if match is not None:
+            df.loc[idx, "damsire_win_rate"] = match.get("damsire_win_rate", 0.08)
+    df["place_tendency"] = df["recent_top3_rate"] - df["recent_win_rate"]
+    return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
+
+def predict_race(models, race_df, venue, surface):
+    score_venue = None
+    score_national = None
+    if (venue, surface) in models["venue"]:
+        try:
+            info = models["venue"][(venue, surface)]
+            cols = info["cols"]
+            for c in cols:
+                if c not in race_df.columns:
+                    race_df[c] = 0
+            X = race_df[cols].fillna(0).values
+            score_venue = info["model"].predict(X)
+        except:
+            pass
+    if surface in models["national"]:
+        try:
+            info = models["national"][surface]
+            cols = info["cols"]
+            for c in cols:
+                if c not in race_df.columns:
+                    race_df[c] = 0
+            X = race_df[cols].fillna(0).values
+            score_national = info["model"].predict(X)
+        except:
+            pass
+    if score_venue is not None and score_national is not None:
+        scores = (score_venue + score_national) / 2
+        model_type = "アンサンブル"
+    elif score_venue is not None:
+        scores = score_venue
+        model_type = "会場"
+    elif score_national is not None:
+        scores = score_national
+        model_type = "全国"
+    else:
+        return None, "モデルなし"
+    result = race_df.copy()
+    result["score"] = scores
+    result["軸スコア"] = result["score"] + result["recent_win_rate"] * 10 + result["recent_top3_rate"] * 2.5
+    result["軸順位"] = result["軸スコア"].rank(ascending=False).astype(int)
+    result["相手順位"] = result["place_tendency"].rank(ascending=False).astype(int)
+    return result, model_type
+
+def render_horse_card(umaban, name, is_star=False):
+    if is_star:
+        st.markdown(f'<div class="horse-card-star"><span class="umaban-star">⭐ {umaban}</span><span class="horse-name">{name}</span></div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="horse-card"><span class="umaban">{umaban}</span><span class="horse-name">{name}</span></div>', unsafe_allow_html=True)
+
+st.markdown("<div class='main-title'>🏇 競馬予想</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>AIが選ぶ、勝ち馬と穴馬</div>", unsafe_allow_html=True)
+
+try:
+    models = load_models()
+    stats = load_stats()
+    st.sidebar.success("準備完了")
+except Exception as e:
+    st.error(f"エラー: {e}")
+    st.stop()
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
+    predict_btn = st.button("🎯 予想する", type="primary", use_container_width=True)
+
+if predict_btn:
+    if len(race_id) != 12:
+        st.error("12桁のレースIDを入力してください")
+    else:
+        with st.spinner("データ取得中..."):
+            info, err = scrape_race(race_id, stats)
+        if err:
+            st.error(err)
+        else:
+            label = "芝" if info["surface"] == "turf" else "ダート"
+            st.markdown(f"<div style='text-align:center; padding:16px; background:#16213e; border-radius:12px; margin:16px 0;'><span style='font-size:24px; color:#eee;'>{info['name']}</span><br><span style='color:#aaa;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
+            result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
+            if result is not None:
+                axis_candidates = result.nsmallest(3, "軸順位")
+                partners = result.nlargest(4, "place_tendency")
+                partner_names = set(partners["horse_name"])
+                axis_names = set(axis_candidates["horse_name"])
+                col_left, col_right = st.columns(2)
+                with col_left:
+                    st.markdown("<div class='section-title'>🎯 軸候補</div>", unsafe_allow_html=True)
+                    for _, row in axis_candidates.iterrows():
+                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in partner_names)
+                with col_right:
+                    st.markdown("<div class='section-title'>🤝 相手馬</div>", unsafe_allow_html=True)
+                    for _, row in partners.iterrows():
+                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in axis_names)
+                st.markdown("<div class='section-title'>💰 推奨買い目</div>", unsafe_allow_html=True)
+                axis_nums = axis_candidates["umaban"].tolist()
+                partner_nums = partners["umaban"].tolist()
+                overlap = list(set(axis_nums) & set(partner_nums))
+                unique_partners = [p for p in partner_nums if p not in axis_nums]
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if len(overlap) >= 2:
+                        box_nums = sorted(overlap)[:4]
+                        points = len(box_nums) * (len(box_nums) - 1) // 2
+                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{' - '.join(map(str, box_nums))}（{points}点）</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {unique_partners[:3]}</div>", unsafe_allow_html=True)
+                with col_b:
+                    if len(overlap) >= 2:
+                        box_nums = sorted(overlap)[:4]
+                        points = len(box_nums) * (len(box_nums) - 1) // 2
+                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{' - '.join(map(str, box_nums))}（{points}点）</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_nums[0]} → {unique_partners[:3]}</div>", unsafe_allow_html=True)
+                with st.expander("全馬一覧"):
+                    display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
+                    display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
+                    st.dataframe(display, hide_index=True, use_container_width=True)
+            else:
+                st.error(mtype)
