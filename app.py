@@ -15,21 +15,21 @@ st.set_page_config(page_title="火花みたいな馬を…", page_icon="🏇", l
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Yomogi&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap');
 .stApp {
     background: linear-gradient(180deg, #1a0a0a 0%, #2d1515 50%, #1a0a0a 100%);
-    font-family: 'Yomogi', cursive;
+    font-family: 'Kaisei Decol', serif;
 }
 .main-title {
     text-align: center;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 400;
     color: #fff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 100, 100, 0.5);
     margin-bottom: 4px;
-    font-family: 'Yomogi', cursive;
+    font-family: 'Kaisei Decol', serif;
     white-space: nowrap;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
 }
 .omikuji-box {
     text-align: center;
@@ -44,12 +44,14 @@ st.markdown("""
 .stButton > button {
     background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
     color: #1a0a0a !important;
-    font-size: 20px !important;
+    font-size: 24px !important;
     font-weight: bold !important;
     border: none !important;
-    border-radius: 4px !important;
-    padding: 12px 20px !important;
-    font-family: 'Yomogi', cursive !important;
+    border-radius: 8px !important;
+    padding: 16px 24px !important;
+    font-family: 'Kaisei Decol', serif !important;
+    letter-spacing: 2px !important;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
 }
 .horse-card {
     background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
@@ -66,9 +68,9 @@ st.markdown("""
     border: 2px solid #ffd700;
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
 }
-.umaban { font-size: 22px; font-weight: bold; color: #ff6b6b; font-family: 'Yomogi', cursive; }
-.umaban-star { font-size: 22px; font-weight: bold; color: #ffd700; font-family: 'Yomogi', cursive; }
-.horse-name { font-size: 14px; color: #eee; margin-left: 8px; font-family: 'Yomogi', cursive; }
+.umaban { font-size: 22px; font-weight: bold; color: #ff6b6b; font-family: 'Kaisei Decol', serif; }
+.umaban-star { font-size: 22px; font-weight: bold; color: #ffd700; font-family: 'Kaisei Decol', serif; }
+.horse-name { font-size: 14px; color: #eee; margin-left: 8px; font-family: 'Kaisei Decol', serif; }
 .section-title {
     font-size: 16px;
     font-weight: bold;
@@ -76,7 +78,7 @@ st.markdown("""
     margin: 16px 0 8px 0;
     padding-bottom: 6px;
     border-bottom: 1px solid #ffd700;
-    font-family: 'Yomogi', cursive;
+    font-family: 'Kaisei Decol', serif;
 }
 .bet-box {
     background: #2d1515;
@@ -85,7 +87,7 @@ st.markdown("""
     padding: 10px 12px;
     margin: 6px 0;
     color: #eee;
-    font-family: 'Yomogi', cursive;
+    font-family: 'Kaisei Decol', serif;
     font-size: 14px;
 }
 .bet-box-chance {
@@ -95,7 +97,7 @@ st.markdown("""
     padding: 10px 12px;
     margin: 6px 0;
     color: #ffd700;
-    font-family: 'Yomogi', cursive;
+    font-family: 'Kaisei Decol', serif;
     box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
     font-size: 14px;
 }
@@ -106,10 +108,10 @@ st.markdown("""
     border: 1px solid #ffd700;
     border-radius: 8px;
     margin: 12px 0;
-    font-family: 'Yomogi', cursive;
+    font-family: 'Kaisei Decol', serif;
 }
 @media (min-width: 768px) {
-    .main-title { font-size: 36px; }
+    .main-title { font-size: 40px; }
     .omikuji-box { padding: 24px; }
     .umaban, .umaban-star { font-size: 28px; }
     .horse-name { font-size: 18px; margin-left: 12px; }
