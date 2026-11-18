@@ -93,6 +93,12 @@ st.markdown("""
     border-bottom: 1px solid #ffd700;
     font-family: 'Kaisei Decol', serif;
 }
+.section-note {
+    font-size: 11px;
+    color: #aaa;
+    font-weight: normal;
+    margin-left: 6px;
+}
 .bet-box {
     background: #2d1515;
     border: 1px solid #ffd700;
@@ -131,6 +137,7 @@ st.markdown("""
     .umaban, .umaban-star { font-size: 28px; }
     .horse-name { font-size: 18px; margin-left: 12px; }
     .section-title { font-size: 18px; }
+    .section-note { font-size: 13px; }
     .bet-box, .bet-box-chance { font-size: 16px; padding: 12px 16px; }
     .horse-card, .horse-card-star { padding: 16px; }
 }
@@ -401,7 +408,7 @@ if predict_btn:
                 ichioshi_names = axis_names & partner_names
                 col_left, col_right = st.columns(2)
                 with col_left:
-                    st.markdown("<div class='section-title'>🎯 本命</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>🎯 本命<span class='section-note'>（人気上位を軸推奨）</span></div>", unsafe_allow_html=True)
                     for _, row in axis_candidates.iterrows():
                         render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in ichioshi_names)
                 with col_right:
