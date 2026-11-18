@@ -40,17 +40,23 @@ st.markdown("""
     border-radius: 8px;
     box-shadow: 0 0 30px rgba(255, 100, 50, 0.4);
 }
+.input-container {
+    max-width: 320px;
+    margin: 0 auto;
+}
 .stButton > button {
     background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
     color: #1a0a0a !important;
-    font-size: 24px !important;
+    font-size: 20px !important;
     font-weight: bold !important;
     border: none !important;
     border-radius: 8px !important;
-    padding: 16px 24px !important;
+    padding: 14px 20px !important;
     font-family: 'Kaisei Decol', serif !important;
     letter-spacing: 2px !important;
     box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
+    width: 100% !important;
+    max-width: 320px !important;
 }
 .horse-card {
     background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
@@ -112,6 +118,8 @@ st.markdown("""
 @media (min-width: 768px) {
     .main-title { font-size: 32px; }
     .omikuji-box { padding: 20px; max-width: 450px; }
+    .input-container { max-width: 450px; }
+    .stButton > button { max-width: 450px !important; font-size: 24px !important; }
     .umaban, .umaban-star { font-size: 28px; }
     .horse-name { font-size: 18px; margin-left: 12px; }
     .section-title { font-size: 18px; }
@@ -358,10 +366,10 @@ except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
 
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
-    predict_btn = st.button("💃盛れ！💃", type="primary", use_container_width=True)
+st.markdown("<div class='input-container'>", unsafe_allow_html=True)
+race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
+predict_btn = st.button("💃盛れ！💃", type="primary", use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 if predict_btn:
     if len(race_id) != 12:
