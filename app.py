@@ -313,3 +313,92 @@ def predict_race(models, race_df, venue, surface):
     elif score_national is not None:
         scores = score_national
         model_type = "全国"
+    else:
+        return None, "モデルなし"
+    result = race_df.copy()
+    result["score"] = scores
+    result["軸スコア"] = result["score"] + result["recent_win_rate"] * 10 + result["recent_top3_rate"] * 2.5
+    result["軸順位"] = result["軸スコア"].rank(ascending=False).astype(int)
+    result["相手順位"] = result["place_tendency"].rank(ascending=False).astype(int)
+    return result, model_type
+
+def render_horse_card(umaban, name, is_star=False):
+    if is_star:
+        st.markdown(f'<div class="horse-card-star"><span class="umaban-star">⭐ {umaban}</span><span class="horse-name">{name}</span></div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="horse-card"><span class="umaban">{umaban}</span><span class="horse-name">{name}</span></div>', unsafe_allow_html=True)
+
+st.markdown("""
+<div class='omikuji-box'>
+    <div class='main-title'>🏇 馬券おみくじ</div>
+    <div class='sub-title'>〜 今日の勝ち馬 〜</div>
+</div>
+""", unsafe_allow_html=True)
+
+try:
+    models = load_models()
+    stats = load_stats()
+    st.sidebar.success("準備完了")
+except Exception as e:
+    st.error(f"エラー: {e}")
+    st.stop()
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
+    predict_btn = st.button("🎋 おみくじを引く", type="primary", use_container_width=True)
+
+if predict_btn:
+    if len(race_id) != 12:
+        st.error("12桁のレースIDを入力してください")
+    else:
+        with st.spinner("占い中..."):
+            info, err = scrape_race(race_id, stats)
+        if err:
+            st.error(err)
+        else:
+            label = "芝" if info["surface"] == "turf" else "ダート"
+            st.markdown(f"<div class='race-info'><span style='font-size:22px; color:#ffd700;'>{info['name']}</span><br><span style='color:#aaa;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
+            result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
+            if result is not None:
+                axis_candidates = result.nsmallest(3, "軸順位")
+                partners = result.nlargest(4, "place_tendency")
+                partner_names = set(partners["horse_name"])
+                axis_names = set(axis_candidates["horse_name"])
+                col_left, col_right = st.columns(2)
+                with col_left:
+                    st.markdown("<div class='section-title'>🎯 本命</div>", unsafe_allow_html=True)
+                    for _, row in axis_candidates.iterrows():
+                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in partner_names)
+                with col_right:
+                    st.markdown("<div class='section-title'>🤝 相手</div>", unsafe_allow_html=True)
+                    for _, row in partners.iterrows():
+                        render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in axis_names)
+                st.markdown("<div class='section-title'>💰 買い目</div>", unsafe_allow_html=True)
+                axis_nums = axis_candidates["umaban"].tolist()
+                partner_nums = partners["umaban"].tolist()
+                overlap = list(set(axis_nums) & set(partner_nums))
+                unique_partners = [p for p in partner_nums if p not in axis_nums]
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if len(overlap) >= 3:
+                        box_nums = sorted(overlap)[:4]
+                        points = len(box_nums) * (len(box_nums) - 1) // 2
+                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{' - '.join(map(str, box_nums))}（{points}点）</div>", unsafe_allow_html=True)
+                    else:
+                        flow_targets = unique_partners[:3] if unique_partners else partner_nums[:3]
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {flow_targets}</div>", unsafe_allow_html=True)
+                with col_b:
+                    if len(overlap) >= 3:
+                        box_nums = sorted(overlap)[:4]
+                        points = len(box_nums) * (len(box_nums) - 1) // 2
+                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{' - '.join(map(str, box_nums))}（{points}点）</div>", unsafe_allow_html=True)
+                    else:
+                        flow_targets = unique_partners[:3] if unique_partners else partner_nums[:3]
+                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_nums[0]} → {flow_targets}</div>", unsafe_allow_html=True)
+                with st.expander("全馬一覧"):
+                    display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
+                    display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
+                    st.dataframe(display, hide_index=True, use_container_width=True)
+            else:
+                st.error(mtype)
