@@ -22,25 +22,26 @@ st.markdown("""
 }
 .main-title {
     text-align: center;
-    font-size: 42px;
+    font-size: 32px;
     font-weight: 700;
     color: #ffd700;
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
     margin-bottom: 4px;
     font-family: 'Shippori Mincho', serif;
+    white-space: nowrap;
 }
 .sub-title {
     text-align: center;
     color: #c9a227;
-    font-size: 14px;
-    letter-spacing: 8px;
+    font-size: 12px;
+    letter-spacing: 4px;
     margin-bottom: 8px;
     font-family: 'Shippori Mincho', serif;
 }
 .omikuji-box {
     text-align: center;
-    padding: 24px;
-    margin: 20px auto;
+    padding: 16px;
+    margin: 10px auto;
     max-width: 450px;
     background: linear-gradient(180deg, #8B0000 0%, #5c0000 100%);
     border: 3px solid #ffd700;
@@ -50,37 +51,37 @@ st.markdown("""
 .stButton > button {
     background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
     color: #1a0a0a !important;
-    font-size: 18px !important;
+    font-size: 16px !important;
     font-weight: bold !important;
     border: none !important;
     border-radius: 4px !important;
-    padding: 12px 40px !important;
+    padding: 12px 20px !important;
     font-family: 'Shippori Mincho', serif !important;
 }
 .horse-card {
     background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
     border-radius: 8px;
-    padding: 16px;
-    margin: 8px 0;
+    padding: 12px;
+    margin: 6px 0;
     border-left: 4px solid #ffd700;
 }
 .horse-card-star {
     background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
     border-radius: 8px;
-    padding: 16px;
-    margin: 8px 0;
+    padding: 12px;
+    margin: 6px 0;
     border: 2px solid #ffd700;
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
 }
-.umaban { font-size: 28px; font-weight: bold; color: #ff6b6b; font-family: 'Shippori Mincho', serif; }
-.umaban-star { font-size: 28px; font-weight: bold; color: #ffd700; font-family: 'Shippori Mincho', serif; }
-.horse-name { font-size: 18px; color: #eee; margin-left: 12px; font-family: 'Shippori Mincho', serif; }
+.umaban { font-size: 22px; font-weight: bold; color: #ff6b6b; font-family: 'Shippori Mincho', serif; }
+.umaban-star { font-size: 22px; font-weight: bold; color: #ffd700; font-family: 'Shippori Mincho', serif; }
+.horse-name { font-size: 14px; color: #eee; margin-left: 8px; font-family: 'Shippori Mincho', serif; }
 .section-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     color: #ffd700;
-    margin: 20px 0 10px 0;
-    padding-bottom: 8px;
+    margin: 16px 0 8px 0;
+    padding-bottom: 6px;
     border-bottom: 1px solid #ffd700;
     font-family: 'Shippori Mincho', serif;
 }
@@ -88,29 +89,41 @@ st.markdown("""
     background: #2d1515;
     border: 1px solid #ffd700;
     border-radius: 4px;
-    padding: 12px 16px;
-    margin: 8px 0;
+    padding: 10px 12px;
+    margin: 6px 0;
     color: #eee;
     font-family: 'Shippori Mincho', serif;
+    font-size: 14px;
 }
 .bet-box-chance {
     background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
     border: 2px solid #ffd700;
     border-radius: 4px;
-    padding: 12px 16px;
-    margin: 8px 0;
+    padding: 10px 12px;
+    margin: 6px 0;
     color: #ffd700;
     font-family: 'Shippori Mincho', serif;
     box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    font-size: 14px;
 }
 .race-info {
     text-align: center;
-    padding: 16px;
+    padding: 12px;
     background: #2d1515;
     border: 1px solid #ffd700;
     border-radius: 8px;
-    margin: 16px 0;
+    margin: 12px 0;
     font-family: 'Shippori Mincho', serif;
+}
+@media (min-width: 768px) {
+    .main-title { font-size: 42px; }
+    .sub-title { font-size: 14px; letter-spacing: 8px; }
+    .omikuji-box { padding: 24px; }
+    .umaban, .umaban-star { font-size: 28px; }
+    .horse-name { font-size: 18px; margin-left: 12px; }
+    .section-title { font-size: 18px; }
+    .bet-box, .bet-box-chance { font-size: 16px; padding: 12px 16px; }
+    .horse-card, .horse-card-star { padding: 16px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -368,7 +381,7 @@ if predict_btn:
             st.error(err)
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
-            st.markdown(f"<div class='race-info'><span style='font-size:22px; color:#ffd700;'>{info['name']}</span><br><span style='color:#aaa;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='race-info'><span style='font-size:18px; color:#ffd700;'>{info['name']}</span><br><span style='color:#aaa; font-size:12px;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 axis_candidates = result.nsmallest(3, "軸順位")
