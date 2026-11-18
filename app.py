@@ -262,19 +262,19 @@ if st.button("予想する", type="primary"):
                 partners = result.nlargest(4, "place_tendency")
                 partner_names = set(partners["horse_name"])
                 axis_names = set(axis_candidates["horse_name"])
-                st.write("**🎯 軸候補（上位3頭）- 77%で1着カバー:**")
+                st.write("**軸候補:**")
                 for _, row in axis_candidates.iterrows():
                     if row["horse_name"] in partner_names:
-                        st.success(f"⭐ {row['umaban']}番 {row['horse_name']} ← イチオシ")
+                        st.success(f"⭐ {row['umaban']}番 {row['horse_name']}")
                     else:
                         st.write(f"  {row['umaban']}番 {row['horse_name']}")
                 st.write("")
-                st.write("**🤝 相手馬（複勝傾向上位4頭）- 98%で3着内カバー:**")
+                st.write("**相手馬:**")
                 for _, row in partners.iterrows():
                     mark = "⭐" if row["horse_name"] in axis_names else ""
-                    st.write(f"  {mark}{row['umaban']}番 {row['horse_name']} ({row['place_tendency']:.2f})")
+                    st.write(f"  {mark}{row['umaban']}番 {row['horse_name']}")
                 st.write("---")
-                st.write("**💰 推奨買い目:**")
+                st.write("**推奨買い目:**")
                 axis_nums = axis_candidates["umaban"].tolist()
                 partner_nums = [p for p in partners["umaban"].tolist() if p not in axis_nums][:3]
                 st.write(f"ワイド: 軸{axis_nums} × 相手{partner_nums}")
