@@ -16,83 +16,110 @@ st.set_page_config(page_title="馬券おみくじ", page_icon="🏇", layout="wi
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(180deg, #1a0a0a 0%, #2d1515 50%, #1a0a0a 100%);
+    background: linear-gradient(180deg, #1a0505 0%, #3d1515 30%, #2a0a0a 70%, #1a0505 100%);
+}
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(ellipse at 20% 80%, rgba(139, 0, 0, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(139, 0, 0, 0.1) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
 }
 .main-title {
     text-align: center;
-    font-size: 42px;
+    font-size: 36px;
     font-weight: bold;
     color: #ffd700;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 2px 4px rgba(0,0,0,0.8);
     margin-bottom: 4px;
+    letter-spacing: 4px;
 }
 .sub-title {
     text-align: center;
-    color: #c9a227;
-    font-size: 14px;
-    letter-spacing: 8px;
+    color: #e8d5a3;
+    font-size: 13px;
+    letter-spacing: 12px;
     margin-bottom: 8px;
 }
 .omikuji-box {
     text-align: center;
-    padding: 24px;
+    padding: 30px 20px;
     margin: 20px auto;
-    max-width: 450px;
-    background: linear-gradient(180deg, #8B0000 0%, #5c0000 100%);
-    border: 3px solid #ffd700;
-    border-radius: 8px;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+    max-width: 420px;
+    background: linear-gradient(180deg, #8B1a1a 0%, #5c0a0a 50%, #3d0505 100%);
+    border: 4px solid #ffd700;
+    border-radius: 4px;
+    box-shadow: 
+        0 0 40px rgba(255, 215, 0, 0.3),
+        inset 0 0 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+.omikuji-box::before {
+    content: "⛩";
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 30px;
 }
 .stButton > button {
-    background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
-    color: #1a0a0a !important;
-    font-size: 18px !important;
+    background: linear-gradient(180deg, #c41e3a 0%, #8B0000 100%) !important;
+    color: #ffd700 !important;
+    font-size: 16px !important;
     font-weight: bold !important;
-    border: none !important;
+    border: 2px solid #ffd700 !important;
     border-radius: 4px !important;
-    padding: 12px 40px !important;
+    padding: 14px 40px !important;
+    letter-spacing: 2px !important;
 }
 .horse-card {
-    background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
-    border-radius: 8px;
-    padding: 16px;
-    margin: 8px 0;
-    border-left: 4px solid #ffd700;
+    background: linear-gradient(135deg, #2a1010 0%, #1a0808 100%);
+    border-radius: 4px;
+    padding: 14px;
+    margin: 6px 0;
+    border-left: 3px solid #c41e3a;
 }
 .horse-card-star {
-    background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
-    border-radius: 8px;
-    padding: 16px;
-    margin: 8px 0;
+    background: linear-gradient(135deg, #3a1818 0%, #2a1010 100%);
+    border-radius: 4px;
+    padding: 14px;
+    margin: 6px 0;
     border: 2px solid #ffd700;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
 }
-.umaban { font-size: 28px; font-weight: bold; color: #ff6b6b; }
-.umaban-star { font-size: 28px; font-weight: bold; color: #ffd700; }
-.horse-name { font-size: 18px; color: #eee; margin-left: 12px; }
+.umaban { font-size: 26px; font-weight: bold; color: #ff6b6b; }
+.umaban-star { font-size: 26px; font-weight: bold; color: #ffd700; }
+.horse-name { font-size: 16px; color: #f5e6d3; margin-left: 10px; }
 .section-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     color: #ffd700;
-    margin: 20px 0 10px 0;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #ffd700;
+    margin: 16px 0 8px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #8B4513;
+    letter-spacing: 2px;
 }
 .bet-box {
-    background: #2d1515;
-    border: 1px solid #ffd700;
+    background: linear-gradient(135deg, #2a1010 0%, #1a0808 100%);
+    border: 1px solid #8B4513;
     border-radius: 4px;
-    padding: 12px 16px;
-    margin: 8px 0;
-    color: #eee;
+    padding: 12px 14px;
+    margin: 6px 0;
+    color: #f5e6d3;
 }
 .race-info {
     text-align: center;
-    padding: 16px;
-    background: #2d1515;
-    border: 1px solid #ffd700;
-    border-radius: 8px;
-    margin: 16px 0;
+    padding: 14px;
+    background: linear-gradient(180deg, #2a1010 0%, #1a0808 100%);
+    border: 1px solid #8B4513;
+    border-radius: 4px;
+    margin: 14px 0;
 }
 </style>
 """, unsafe_allow_html=True)
