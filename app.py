@@ -11,6 +11,58 @@ import time
 PIPELINE_DIR = "pipeline"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
+st.set_page_config(page_title="競馬予想", page_icon="🏇", layout="wide")
+
+st.markdown("""
+<style>
+.horse-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 0;
+    border-left: 4px solid #e94560;
+}
+.horse-card-star {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 0;
+    border-left: 4px solid #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+.umaban {
+    font-size: 28px;
+    font-weight: bold;
+    color: #e94560;
+}
+.umaban-star {
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffd700;
+}
+.horse-name {
+    font-size: 18px;
+    color: #eee;
+    margin-left: 12px;
+}
+.section-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #e94560;
+    margin: 20px 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e94560;
+}
+.bet-box {
+    background: #0f3460;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    color: #eee;
+}
+</style>
+""", unsafe_allow_html=True)
+
 @st.cache_resource
 def load_models():
     models = {"venue": {}, "national": {}}
@@ -231,57 +283,98 @@ def predict_race(models, race_df, venue, surface):
     result["相手順位"] = result["place_tendency"].rank(ascending=False).astype(int)
     return result, model_type
 
-st.set_page_config(page_title="競馬予想", page_icon="🏇")
-st.title("競馬予想")
+def render_horse_card(umaban, name, is_star=False):
+    if is_star:
+        st.markdown(f"""
+        <div class="horse-card-star">
+            <span class="umaban-star">⭐ {umaban}</span>
+            <span class="horse-name">{name}</span>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="horse-card">
+            <span class="umaban">{umaban}</span>
+            <span class="horse-name">{name}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+st.markdown("<h1 style='text-align:center; color:#e94560;'>🏇 競馬予想</h1>", unsafe_allow_html=True)
 
 try:
     models = load_models()
     stats = load_stats()
-    st.sidebar.success(f"モデル: 会場{len(models['venue'])} / 全国{len(models['national'])}")
+    st.sidebar.success("準備完了")
 except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
 
-race_id = st.text_input("レースID", placeholder="202406010101")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    race_id = st.text_input("", placeholder="レースIDを入力（12桁）", label_visibility="collapsed")
+    predict_btn = st.button("予想する", type="primary", use_container_width=True)
 
-if st.button("予想する", type="primary"):
+if predict_btn:
     if len(race_id) != 12:
-        st.error("12桁で入力")
+        st.error("12桁のレースIDを入力してください")
     else:
-        with st.spinner("取得中..."):
+        with st.spinner("データ取得中..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
         else:
             label = "芝" if info["surface"] == "turf" else "ダート"
-            st.info(f"{info['name']} / {info['venue']} {label} {info['distance']}m")
+            st.markdown(f"""
+            <div style='text-align:center; padding:16px; background:#16213e; border-radius:12px; margin:16px 0;'>
+                <span style='font-size:24px; color:#eee;'>{info['name']}</span><br>
+                <span style='color:#aaa;'>{info['venue']} / {label} / {info['distance']}m</span>
+            </div>
+            """, unsafe_allow_html=True)
+            
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
-                st.subheader(f"予想結果（{mtype}）")
                 axis_candidates = result.nsmallest(3, "軸順位")
                 partners = result.nlargest(4, "place_tendency")
                 partner_names = set(partners["horse_name"])
                 axis_names = set(axis_candidates["horse_name"])
-                st.write("**軸候補:**")
-                for _, row in axis_candidates.iterrows():
-                    if row["horse_name"] in partner_names:
-                        st.success(f"⭐ {row['umaban']}番 {row['horse_name']}")
-                    else:
-                        st.write(f"  {row['umaban']}番 {row['horse_name']}")
-                st.write("")
-                st.write("**相手馬:**")
-                for _, row in partners.iterrows():
-                    mark = "⭐" if row["horse_name"] in axis_names else ""
-                    st.write(f"  {mark}{row['umaban']}番 {row['horse_name']}")
-                st.write("---")
-                st.write("**推奨買い目:**")
+                
+                col_left, col_right = st.columns(2)
+                
+                with col_left:
+                    st.markdown("<div class='section-title'>🎯 軸候補</div>", unsafe_allow_html=True)
+                    for _, row in axis_candidates.iterrows():
+                        is_star = row["horse_name"] in partner_names
+                        render_horse_card(row["umaban"], row["horse_name"], is_star)
+                
+                with col_right:
+                    st.markdown("<div class='section-title'>🤝 相手馬</div>", unsafe_allow_html=True)
+                    for _, row in partners.iterrows():
+                        is_star = row["horse_name"] in axis_names
+                        render_horse_card(row["umaban"], row["horse_name"], is_star)
+                
+                st.markdown("<div class='section-title'>💰 推奨買い目</div>", unsafe_allow_html=True)
                 axis_nums = axis_candidates["umaban"].tolist()
                 partner_nums = [p for p in partners["umaban"].tolist() if p not in axis_nums][:3]
-                st.write(f"ワイド: 軸{axis_nums} × 相手{partner_nums}")
-                st.write(f"馬連: 軸{axis_nums[0]} × 相手{partner_nums}")
-                st.write("---")
-                display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
-                display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
-                st.dataframe(display, hide_index=True)
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.markdown(f"""
+                    <div class='bet-box'>
+                        <b>ワイド</b><br>
+                        軸 {axis_nums} × 相手 {partner_nums}
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col_b:
+                    st.markdown(f"""
+                    <div class='bet-box'>
+                        <b>馬連</b><br>
+                        軸 {axis_nums[0]} × 相手 {partner_nums}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with st.expander("全馬一覧"):
+                    display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
+                    display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
+                    st.dataframe(display, hide_index=True, use_container_width=True)
             else:
                 st.error(mtype)
