@@ -409,7 +409,7 @@ if predict_btn:
                     for _, row in partners.iterrows():
                         render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in ichioshi_names)
                 st.markdown("<div class='section-title'>💰 買い目</div>", unsafe_allow_html=True)
-                ichioshi_df = result[result["horse_name"].isin(ichioshi_names)].sort_values("相手順位")
+                ichioshi_df = result[result["horse_name"].isin(ichioshi_names)].sort_values("軸順位")
                 ichioshi_nums = [str(x) for x in ichioshi_df["umaban"].tolist()]
                 axis_nums = [str(x) for x in axis_candidates["umaban"].tolist()]
                 partner_nums = [str(x) for x in partners["umaban"].tolist()]
@@ -435,7 +435,8 @@ if predict_btn:
                     with col_b:
                         st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
                 elif n_ichioshi >= 3:
-                    axis_str = ichioshi_nums[0]
+                    ichioshi_by_aite = result[result["horse_name"].isin(ichioshi_names)].sort_values("相手順位")
+                    axis_str = str(ichioshi_by_aite["umaban"].iloc[0])
                     flow_nums = sorted([n for n in all_nums_set if n != axis_str])
                     flow_str = ', '.join(flow_nums)
                     points = len(flow_nums)
