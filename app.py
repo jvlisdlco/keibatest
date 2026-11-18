@@ -13,7 +13,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 @st.cache_resource
 def load_models():
-    models = {"venue": {}, "national": {}, "place": None}
+    models = {"venue": {}, "national": {}}
     with open(f"{PIPELINE_DIR}/config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
     turf_cols = config["turf_cols"]
@@ -24,9 +24,7 @@ def load_models():
         path = f"{PIPELINE_DIR}/{filename}"
         try:
             model = lgb.Booster(model_file=path)
-            if "place" in filename:
-                models["place"] = model
-            elif "national" in filename:
+            if "national" in filename:
                 surface = "turf" if "turf" in filename else "dirt"
                 cols = turf_cols if surface == "turf" else dirt_cols
                 models["national"][surface] = {"model": model, "cols": cols}
@@ -165,7 +163,6 @@ def scrape_race(race_id, stats):
     df["recent_avg_rank"] = 8.0
     df["recent_win_rate"] = 0.08
     df["recent_top3_rate"] = 0.25
-    df["is_turf"] = 1 if surface == "turf" else 0
     for idx, row in df.iterrows():
         match = find_match(stats.get("jockey_stats", pd.DataFrame()), "jockey", row["jockey"])
         if match is not None:
@@ -188,6 +185,7 @@ def scrape_race(race_id, stats):
         match = find_match(stats.get("damsire_stats", pd.DataFrame()), "damsire", damsire)
         if match is not None:
             df.loc[idx, "damsire_win_rate"] = match.get("damsire_win_rate", 0.08)
+    df["place_tendency"] = df["recent_top3_rate"] - df["recent_win_rate"]
     return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
 
 def predict_race(models, race_df, venue, surface):
@@ -225,22 +223,11 @@ def predict_race(models, race_df, venue, surface):
         scores = score_national
         model_type = "全国"
     else:
-        return None, None, "モデルなし"
+        return None, "モデルなし"
     result = race_df.copy()
-    result["score_win"] = scores
-    result["軸順位"] = result["score_win"].rank(ascending=False).astype(int)
-    if models["place"] is not None:
-        place_cols = ["frame_rank", "distance", "jockey_avg_rank", "trainer_avg_rank",
-                      "jockey_win_rate", "trainer_win_rate", "sire_win_rate", "damsire_win_rate",
-                      "recent_avg_rank", "recent_win_rate", "recent_top3_rate", "is_turf"]
-        for c in place_cols:
-            if c not in result.columns:
-                result[c] = 0
-        X_place = result[place_cols].fillna(0).values
-        result["score_place"] = models["place"].predict(X_place)
-        result["相手順位"] = result["score_place"].rank(ascending=False).astype(int)
-    else:
-        result["相手順位"] = result["軸順位"]
+    result["score"] = scores
+    result["軸順位"] = result["score"].rank(ascending=False).astype(int)
+    result["相手順位"] = result["place_tendency"].rank(ascending=False).astype(int)
     return result, model_type
 
 st.set_page_config(page_title="競馬予想", page_icon="🏇")
@@ -249,8 +236,7 @@ st.title("競馬予想")
 try:
     models = load_models()
     stats = load_stats()
-    place_status = "あり" if models["place"] else "なし"
-    st.sidebar.success(f"モデル: 会場{len(models['venue'])} / 全国{len(models['national'])} / 相手{place_status}")
+    st.sidebar.success(f"モデル: 会場{len(models['venue'])} / 全国{len(models['national'])}")
 except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
@@ -271,21 +257,27 @@ if st.button("予想する", type="primary"):
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想結果（{mtype}）")
-                axis = result.sort_values("軸順位")
-                axis_horse = axis.iloc[0]
-                st.write(f"**軸馬: {axis_horse['umaban']}番 {axis_horse['horse_name']}**")
-                partners = result[result["horse_name"] != axis_horse["horse_name"]].sort_values("相手順位").head(4)
-                st.write("**相手馬:**")
+                axis = result.sort_values("軸順位").iloc[0]
+                partners = result.nlargest(4, "place_tendency")
+                is_ichioshi = axis["horse_name"] in partners["horse_name"].values
+                if is_ichioshi:
+                    st.success(f"⭐ イチオシ軸馬: {axis['umaban']}番 {axis['horse_name']}")
+                else:
+                    st.write(f"**軸馬: {axis['umaban']}番 {axis['horse_name']}**")
+                st.write("**相手馬（複勝傾向）:**")
                 for _, row in partners.iterrows():
-                    st.write(f"  {row['umaban']}番 {row['horse_name']}")
+                    mark = "⭐" if row["horse_name"] == axis["horse_name"] else ""
+                    st.write(f"  {mark}{row['umaban']}番 {row['horse_name']} (傾向:{row['place_tendency']:.2f})")
                 st.write("---")
                 st.write("**推奨買い目:**")
-                axis_num = axis_horse["umaban"]
-                partner_nums = partners["umaban"].tolist()
-                st.write(f"ワイド: {axis_num}-{partner_nums[0]}, {axis_num}-{partner_nums[1]}, {axis_num}-{partner_nums[2]}（3点）")
-                st.write(f"馬連: {axis_num}-{partner_nums[0]}, {axis_num}-{partner_nums[1]}, {axis_num}-{partner_nums[2]}（3点）")
-                display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
-                display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
+                axis_num = axis["umaban"]
+                partner_nums = [p for p in partners["umaban"].tolist() if p != axis_num][:4]
+                if len(partner_nums) >= 3:
+                    st.write(f"ワイド: {axis_num}-{partner_nums[0]}, {axis_num}-{partner_nums[1]}, {axis_num}-{partner_nums[2]}（3点）")
+                    st.write(f"馬連: {axis_num}-{partner_nums[0]}, {axis_num}-{partner_nums[1]}, {axis_num}-{partner_nums[2]}（3点）")
+                st.write("---")
+                display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位", "place_tendency"]].sort_values("軸順位")
+                display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位", "複勝傾向"]
                 st.dataframe(display, hide_index=True)
             else:
                 st.error(mtype)
