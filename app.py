@@ -226,7 +226,8 @@ def predict_race(models, race_df, venue, surface):
         return None, "モデルなし"
     result = race_df.copy()
     result["score"] = scores
-    result["軸順位"] = result["score"].rank(ascending=False).astype(int)
+    result["軸スコア"] = result["score"] + result["recent_win_rate"] * 10 + result["recent_top3_rate"] * 2.5
+    result["軸順位"] = result["軸スコア"].rank(ascending=False).astype(int)
     result["相手順位"] = result["place_tendency"].rank(ascending=False).astype(int)
     return result, model_type
 
@@ -257,27 +258,30 @@ if st.button("予想する", type="primary"):
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 st.subheader(f"予想結果（{mtype}）")
-                axis = result.sort_values("軸順位").iloc[0]
+                axis_candidates = result.nsmallest(3, "軸順位")
                 partners = result.nlargest(4, "place_tendency")
-                is_ichioshi = axis["horse_name"] in partners["horse_name"].values
-                if is_ichioshi:
-                    st.success(f"⭐ イチオシ軸馬: {axis['umaban']}番 {axis['horse_name']}")
-                else:
-                    st.write(f"**軸馬: {axis['umaban']}番 {axis['horse_name']}**")
-                st.write("**相手馬（複勝傾向）:**")
+                partner_names = set(partners["horse_name"])
+                axis_names = set(axis_candidates["horse_name"])
+                st.write("**🎯 軸候補（上位3頭）- 77%で1着カバー:**")
+                for _, row in axis_candidates.iterrows():
+                    if row["horse_name"] in partner_names:
+                        st.success(f"⭐ {row['umaban']}番 {row['horse_name']} ← イチオシ")
+                    else:
+                        st.write(f"  {row['umaban']}番 {row['horse_name']}")
+                st.write("")
+                st.write("**🤝 相手馬（複勝傾向上位4頭）- 98%で3着内カバー:**")
                 for _, row in partners.iterrows():
-                    mark = "⭐" if row["horse_name"] == axis["horse_name"] else ""
-                    st.write(f"  {mark}{row['umaban']}番 {row['horse_name']} (傾向:{row['place_tendency']:.2f})")
+                    mark = "⭐" if row["horse_name"] in axis_names else ""
+                    st.write(f"  {mark}{row['umaban']}番 {row['horse_name']} ({row['place_tendency']:.2f})")
                 st.write("---")
-                st.write("**推奨買い目:**")
-                axis_num = axis["umaban"]
-                partner_nums = [p for p in partners["umaban"].tolist() if p != axis_num][:4]
-                if len(partner_nums) >= 3:
-                    st.write(f"ワイド: {axis_num}-{partner_nums[0]}, {axis_num}-{partner_nums[1]}, {axis_num}-{partner_nums[2]}（3点）")
-                    st.write(f"馬連: {axis_num}-{partner_nums[0]}, {axis_num}-{partner_nums[1]}, {axis_num}-{partner_nums[2]}（3点）")
+                st.write("**💰 推奨買い目:**")
+                axis_nums = axis_candidates["umaban"].tolist()
+                partner_nums = [p for p in partners["umaban"].tolist() if p not in axis_nums][:3]
+                st.write(f"ワイド: 軸{axis_nums} × 相手{partner_nums}")
+                st.write(f"馬連: 軸{axis_nums[0]} × 相手{partner_nums}")
                 st.write("---")
-                display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位", "place_tendency"]].sort_values("軸順位")
-                display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位", "複勝傾向"]
+                display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
+                display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
                 st.dataframe(display, hide_index=True)
             else:
                 st.error(mtype)
