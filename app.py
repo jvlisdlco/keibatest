@@ -385,7 +385,7 @@ if predict_btn:
     if len(race_id) != 12:
         st.error("12桁のレースIDを入力してください")
     else:
-        with st.spinner("占い中..."):
+        with st.spinner("初めてを経験中…"):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
