@@ -22,20 +22,19 @@ st.markdown("""
 }
 .main-title {
     text-align: center;
-    font-size: 32px;
+    font-size: 22px;
     font-weight: 400;
     color: #fff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 100, 100, 0.5);
     margin-bottom: 4px;
     font-family: 'Kaisei Decol', serif;
-    white-space: nowrap;
-    letter-spacing: 4px;
+    letter-spacing: 2px;
 }
 .omikuji-box {
     text-align: center;
-    padding: 20px;
+    padding: 16px 12px;
     margin: 10px auto;
-    max-width: 450px;
+    max-width: 320px;
     background: linear-gradient(180deg, #8B0000 0%, #4a0000 100%);
     border: 3px solid #ffd700;
     border-radius: 8px;
@@ -111,8 +110,8 @@ st.markdown("""
     font-family: 'Kaisei Decol', serif;
 }
 @media (min-width: 768px) {
-    .main-title { font-size: 40px; }
-    .omikuji-box { padding: 24px; }
+    .main-title { font-size: 32px; }
+    .omikuji-box { padding: 20px; max-width: 450px; }
     .umaban, .umaban-star { font-size: 28px; }
     .horse-name { font-size: 18px; margin-left: 12px; }
     .section-title { font-size: 18px; }
