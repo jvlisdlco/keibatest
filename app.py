@@ -93,6 +93,16 @@ st.markdown("""
     color: #eee;
     font-family: 'Shippori Mincho', serif;
 }
+.bet-box-chance {
+    background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
+    border: 2px solid #ffd700;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    color: #ffd700;
+    font-family: 'Shippori Mincho', serif;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
 .race-info {
     text-align: center;
     padding: 16px;
@@ -381,7 +391,11 @@ if predict_btn:
                 others = sorted(list(set(axis_nums + partner_nums) - set(ichioshi)))
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    if len(ichioshi) >= 2:
+                    if len(ichioshi) >= 3:
+                        wide_nums = ichioshi[:3]
+                        points = len(wide_nums) * (len(wide_nums) - 1) // 2
+                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{', '.join(wide_nums)}（{points}点）</div>", unsafe_allow_html=True)
+                    elif len(ichioshi) == 2:
                         axis_str = ', '.join(ichioshi[:2])
                         other_str = ', '.join(others[:3])
                         points = 2 * min(3, len(others))
@@ -389,7 +403,10 @@ if predict_btn:
                     else:
                         st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
                 with col_b:
-                    if len(ichioshi) >= 2:
+                    if len(ichioshi) >= 3:
+                        box_str = ', '.join(ichioshi[:3])
+                        st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複 BOX</b><br>{box_str}（1点）</div>", unsafe_allow_html=True)
+                    elif len(ichioshi) == 2:
                         axis_str = ', '.join(ichioshi[:2])
                         other_str = ', '.join(others[:3])
                         points = 2 * min(3, len(others))
