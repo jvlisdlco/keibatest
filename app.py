@@ -389,15 +389,15 @@ if predict_btn:
                 partner_nums = [str(x) for x in partners["umaban"].tolist()]
                 ichioshi = sorted(list(set(axis_nums) & set(partner_nums)))
                 others = sorted(list(set(axis_nums + partner_nums) - set(ichioshi)))
+                all_nums = sorted(ichioshi[:3] + others[:1])
+                n = len(all_nums)
+                wide_points = n * (n - 1) // 2
+                umaren_points = n * (n - 1) // 2
+                sanren_points = n * (n - 1) * (n - 2) // 6 if n >= 3 else 0
                 col_a, col_b = st.columns(2)
                 with col_a:
                     if len(ichioshi) >= 3:
-                        box_str = ', '.join(ichioshi[:3])
-                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{box_str}（3点）</div>", unsafe_allow_html=True)
-                        if others:
-                            flow_str = ', '.join(others[:2])
-                            points = 3 * min(2, len(others))
-                            st.markdown(f"<div class='bet-box'><b>ワイド流し</b><br>軸 {box_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{', '.join(all_nums)}（{wide_points}点）</div>", unsafe_allow_html=True)
                     elif len(ichioshi) == 2:
                         axis_str = ', '.join(ichioshi[:2])
                         other_str = ', '.join(others[:3])
@@ -407,9 +407,7 @@ if predict_btn:
                         st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
                 with col_b:
                     if len(ichioshi) >= 3:
-                        box_str = ', '.join(ichioshi[:3])
-                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{box_str}（3点）</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複 BOX</b><br>{box_str}（1点）</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{', '.join(all_nums)}（{umaren_points}点）</div>", unsafe_allow_html=True)
                     elif len(ichioshi) == 2:
                         axis_str = ', '.join(ichioshi[:2])
                         other_str = ', '.join(others[:3])
@@ -417,6 +415,8 @@ if predict_btn:
                         st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {other_str}（{points}点）</div>", unsafe_allow_html=True)
                     else:
                         st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
+                if len(ichioshi) >= 3:
+                    st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複 BOX</b><br>{', '.join(all_nums)}（{sanren_points}点）</div>", unsafe_allow_html=True)
                 with st.expander("全馬一覧"):
                     display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
                     display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
