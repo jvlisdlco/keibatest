@@ -375,27 +375,27 @@ if predict_btn:
                     for _, row in partners.iterrows():
                         render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in axis_names)
                 st.markdown("<div class='section-title'>💰 買い目</div>", unsafe_allow_html=True)
-                axis_nums = axis_candidates["umaban"].tolist()
-                partner_nums = partners["umaban"].tolist()
-                overlap = list(set(axis_nums) & set(partner_nums))
-                unique_partners = [p for p in partner_nums if p not in axis_nums]
+                axis_nums = [str(x) for x in axis_candidates["umaban"].tolist()]
+                partner_nums = [str(x) for x in partners["umaban"].tolist()]
+                ichioshi = sorted(list(set(axis_nums) & set(partner_nums)))
+                others = sorted(list(set(axis_nums + partner_nums) - set(ichioshi)))
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    if len(overlap) >= 3:
-                        box_nums = sorted(overlap)[:4]
-                        points = len(box_nums) * (len(box_nums) - 1) // 2
-                        st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{' - '.join(map(str, box_nums))}（{points}点）</div>", unsafe_allow_html=True)
+                    if len(ichioshi) >= 2:
+                        axis_str = ', '.join(ichioshi[:2])
+                        other_str = ', '.join(others[:3])
+                        points = 2 * min(3, len(others))
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_str} → {other_str}（{points}点）</div>", unsafe_allow_html=True)
                     else:
-                        flow_targets = unique_partners[:3] if unique_partners else partner_nums[:3]
-                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {flow_targets}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
                 with col_b:
-                    if len(overlap) >= 3:
-                        box_nums = sorted(overlap)[:4]
-                        points = len(box_nums) * (len(box_nums) - 1) // 2
-                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{' - '.join(map(str, box_nums))}（{points}点）</div>", unsafe_allow_html=True)
+                    if len(ichioshi) >= 2:
+                        axis_str = ', '.join(ichioshi[:2])
+                        other_str = ', '.join(others[:3])
+                        points = 2 * min(3, len(others))
+                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {other_str}（{points}点）</div>", unsafe_allow_html=True)
                     else:
-                        flow_targets = unique_partners[:3] if unique_partners else partner_nums[:3]
-                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_nums[0]} → {flow_targets}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_nums[0]} → {', '.join(partner_nums[:3])}</div>", unsafe_allow_html=True)
                 with st.expander("全馬一覧"):
                     display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
                     display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
