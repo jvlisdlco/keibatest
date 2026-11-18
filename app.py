@@ -22,23 +22,26 @@ def load_models():
         if not filename.endswith(".txt"):
             continue
         path = f"{PIPELINE_DIR}/{filename}"
-        model = lgb.Booster(model_file=path)
-        if "national" in filename:
-            surface = "turf" if "turf" in filename else "dirt"
-            cols = turf_cols if surface == "turf" else dirt_cols
-            models["national"][surface] = {"model": model, "cols": cols}
-        else:
-            parts = filename.replace("model_", "").replace(".txt", "").rsplit("_", 1)
-            if len(parts) == 2:
-                venue, surface = parts
+        try:
+            model = lgb.Booster(model_file=path)
+            if "national" in filename:
+                surface = "turf" if "turf" in filename else "dirt"
                 cols = turf_cols if surface == "turf" else dirt_cols
-                models["venue"][(venue, surface)] = {"model": model, "cols": cols}
+                models["national"][surface] = {"model": model, "cols": cols}
+            else:
+                parts = filename.replace("model_", "").replace(".txt", "").replace("_v3", "").rsplit("_", 1)
+                if len(parts) == 2:
+                    venue, surface = parts
+                    cols = turf_cols if surface == "turf" else dirt_cols
+                    models["venue"][(venue, surface)] = {"model": model, "cols": cols}
+        except:
+            pass
     return models
 
 @st.cache_data
 def load_stats():
     stats = {}
-    for name in ["jockey_stats", "trainer_stats", "sire_stats", "damsire_stats", "horse_stats"]:
+    for name in ["jockey_stats", "trainer_stats", "sire_stats", "damsire_stats"]:
         path = f"{PIPELINE_DIR}/{name}.csv"
         if os.path.exists(path):
             df = pd.read_csv(path)
@@ -50,50 +53,37 @@ def load_stats():
             stats[name] = pd.DataFrame()
     return stats
 
-def get_horse_history(horse_id):
+def get_recent_stats(horse_id):
     if not horse_id:
-        return None, None
+        return 8.0, 0.08, 0.25
     url = f"https://db.netkeiba.com/horse/result/{horse_id}"
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=10)
+        resp = requests.get(url, headers=HEADERS, timeout=8)
         resp.encoding = "euc-jp"
         soup = BeautifulSoup(resp.content, "html.parser", from_encoding="euc-jp")
         table = soup.select_one("table.db_h_race_results")
         if not table:
-            return None, None
-        agari_list = []
-        corner_list = []
-        for row in table.select("tr")[1:20]:
+            return 8.0, 0.08, 0.25
+        ranks = []
+        for row in table.select("tr")[1:6]:
             tds = row.select("td")
-            if len(tds) < 28:
+            if len(tds) < 12:
                 continue
-            race_name = tds[4].get_text(strip=True) if len(tds) > 4 else ""
-            dist_text = tds[14].get_text(strip=True) if len(tds) > 14 else ""
-            if "障" in race_name or "障" in dist_text:
-                continue
-            agari_text = tds[27].get_text(strip=True)
-            corner_text = tds[25].get_text(strip=True)
+            rank_text = tds[11].get_text(strip=True)
             try:
-                val = float(agari_text)
-                if 33.0 <= val <= 40.0:
-                    agari_list.append(val)
+                rank = int(rank_text)
+                if 1 <= rank <= 18:
+                    ranks.append(rank)
             except:
                 pass
-            try:
-                if "-" in corner_text:
-                    parts = corner_text.split("-")
-                    last = int(parts[-1])
-                    if 1 <= last <= 18:
-                        corner_list.append(last)
-            except:
-                pass
-            if len(agari_list) >= 5:
-                break
-        avg_agari = round(sum(agari_list) / len(agari_list), 1) if len(agari_list) >= 2 else None
-        avg_corner = round(sum(corner_list) / len(corner_list), 1) if len(corner_list) >= 2 else None
-        return avg_agari, avg_corner
+        if not ranks:
+            return 8.0, 0.08, 0.25
+        avg_rank = sum(ranks) / len(ranks)
+        win_rate = sum(1 for r in ranks if r == 1) / len(ranks)
+        top3_rate = sum(1 for r in ranks if r <= 3) / len(ranks)
+        return round(avg_rank, 2), round(win_rate, 3), round(top3_rate, 3)
     except:
-        return None, None
+        return 8.0, 0.08, 0.25
 
 def get_pedigree(horse_id):
     if not horse_id:
@@ -168,73 +158,60 @@ def scrape_race(race_id, stats):
     df["jockey_win_rate"] = 0.08
     df["trainer_avg_rank"] = 8.0
     df["trainer_win_rate"] = 0.08
-    df["sire"] = ""
-    df["damsire"] = ""
     df["sire_win_rate"] = 0.08
     df["damsire_win_rate"] = 0.08
-    df["avg_agari"] = 36.5
-    df["avg_last_corner"] = 6.0
-    horse_stats = stats.get("horse_stats", pd.DataFrame())
+    df["recent_avg_rank"] = 8.0
+    df["recent_win_rate"] = 0.08
+    df["recent_top3_rate"] = 0.25
     for idx, row in df.iterrows():
         match = find_match(stats.get("jockey_stats", pd.DataFrame()), "jockey", row["jockey"])
         if match is not None:
-            df.loc[idx, "jockey_avg_rank"] = match["jockey_avg_rank"]
-            df.loc[idx, "jockey_win_rate"] = match["jockey_win_rate"]
+            df.loc[idx, "jockey_avg_rank"] = match.get("jockey_avg_rank", 8.0)
+            df.loc[idx, "jockey_win_rate"] = match.get("jockey_win_rate", 0.08)
         match = find_match(stats.get("trainer_stats", pd.DataFrame()), "trainer", row["trainer"])
         if match is not None:
-            df.loc[idx, "trainer_avg_rank"] = match["trainer_avg_rank"]
-            df.loc[idx, "trainer_win_rate"] = match["trainer_win_rate"]
-        horse_match = find_match(horse_stats, "horse_name", row["horse_name"])
-        if horse_match is not None:
-            if "avg_agari" in horse_match.index and pd.notna(horse_match["avg_agari"]):
-                df.loc[idx, "avg_agari"] = horse_match["avg_agari"]
-            if "avg_last_corner" in horse_match.index and pd.notna(horse_match["avg_last_corner"]):
-                df.loc[idx, "avg_last_corner"] = horse_match["avg_last_corner"]
-        else:
-            avg_agari, avg_corner = get_horse_history(row["horse_id"])
-            if avg_agari is not None:
-                df.loc[idx, "avg_agari"] = avg_agari
-            if avg_corner is not None:
-                df.loc[idx, "avg_last_corner"] = avg_corner
-            time.sleep(0.15)
+            df.loc[idx, "trainer_avg_rank"] = match.get("trainer_avg_rank", 8.0)
+            df.loc[idx, "trainer_win_rate"] = match.get("trainer_win_rate", 0.08)
+        recent_rank, recent_win, recent_top3 = get_recent_stats(row["horse_id"])
+        df.loc[idx, "recent_avg_rank"] = recent_rank
+        df.loc[idx, "recent_win_rate"] = recent_win
+        df.loc[idx, "recent_top3_rate"] = recent_top3
+        time.sleep(0.15)
         sire, damsire = get_pedigree(row["horse_id"])
-        df.loc[idx, "sire"] = sire
-        df.loc[idx, "damsire"] = damsire
         time.sleep(0.1)
         match = find_match(stats.get("sire_stats", pd.DataFrame()), "sire", sire)
         if match is not None:
-            df.loc[idx, "sire_win_rate"] = match["sire_win_rate"]
+            df.loc[idx, "sire_win_rate"] = match.get("sire_win_rate", 0.08)
         match = find_match(stats.get("damsire_stats", pd.DataFrame()), "damsire", damsire)
         if match is not None:
-            df.loc[idx, "damsire_win_rate"] = match["damsire_win_rate"]
-    df["sire_venue_win"] = df["sire_win_rate"]
-    df["sire_dist_win"] = df["sire_win_rate"]
-    df["damsire_venue_win"] = df["damsire_win_rate"]
-    df["damsire_dist_win"] = df["damsire_win_rate"]
-    df["venue_win_rate"] = 0.08
-    df["track_win_rate"] = 0.08
-    df["dist_win_rate"] = 0.08
+            df.loc[idx, "damsire_win_rate"] = match.get("damsire_win_rate", 0.08)
     return {"name": race_name, "venue": venue, "surface": surface, "distance": distance, "horses": df}, None
 
 def predict_race(models, race_df, venue, surface):
     score_venue = None
     score_national = None
     if (venue, surface) in models["venue"]:
-        info = models["venue"][(venue, surface)]
-        cols = info["cols"]
-        for c in cols:
-            if c not in race_df.columns:
-                race_df[c] = 0
-        X = race_df[cols].fillna(0).values
-        score_venue = info["model"].predict(X)
+        try:
+            info = models["venue"][(venue, surface)]
+            cols = info["cols"]
+            for c in cols:
+                if c not in race_df.columns:
+                    race_df[c] = 0
+            X = race_df[cols].fillna(0).values
+            score_venue = info["model"].predict(X)
+        except:
+            pass
     if surface in models["national"]:
-        info = models["national"][surface]
-        cols = info["cols"]
-        for c in cols:
-            if c not in race_df.columns:
-                race_df[c] = 0
-        X = race_df[cols].fillna(0).values
-        score_national = info["model"].predict(X)
+        try:
+            info = models["national"][surface]
+            cols = info["cols"]
+            for c in cols:
+                if c not in race_df.columns:
+                    race_df[c] = 0
+            X = race_df[cols].fillna(0).values
+            score_national = info["model"].predict(X)
+        except:
+            pass
     if score_venue is not None and score_national is not None:
         scores = (score_venue + score_national) / 2
         model_type = "アンサンブル"
@@ -257,7 +234,7 @@ st.title("競馬予想")
 try:
     models = load_models()
     stats = load_stats()
-    st.sidebar.success("読込完了")
+    st.sidebar.success(f"モデル: 会場{len(models['venue'])} / 全国{len(models['national'])}")
 except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
@@ -268,7 +245,7 @@ if st.button("予想する", type="primary"):
     if len(race_id) != 12:
         st.error("12桁で入力")
     else:
-        with st.spinner("取得中..."):
+        with st.spinner("取得中（直近成績含む）..."):
             info, err = scrape_race(race_id, stats)
         if err:
             st.error(err)
