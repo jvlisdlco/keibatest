@@ -20,43 +20,51 @@ st.markdown("""
     background: linear-gradient(180deg, #1a0a0a 0%, #2d1515 50%, #1a0a0a 100%);
     font-family: 'Kaisei Decol', serif;
 }
+.center-container {
+    max-width: 340px;
+    margin: 0 auto;
+    padding: 0 10px;
+}
 .main-title {
     text-align: center;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 400;
     color: #fff;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 100, 100, 0.5);
-    margin-bottom: 4px;
+    margin: 0;
     font-family: 'Kaisei Decol', serif;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 .omikuji-box {
     text-align: center;
-    padding: 16px 12px;
-    margin: 10px auto;
-    max-width: 320px;
+    padding: 14px 10px;
+    margin: 0 auto 12px auto;
     background: linear-gradient(180deg, #8B0000 0%, #4a0000 100%);
     border: 3px solid #ffd700;
     border-radius: 8px;
     box-shadow: 0 0 30px rgba(255, 100, 50, 0.4);
 }
-.input-container {
-    max-width: 320px;
-    margin: 0 auto;
+.stTextInput > div > div > input {
+    background: #2d1515 !important;
+    border: 2px solid #ffd700 !important;
+    border-radius: 8px !important;
+    color: #fff !important;
+    font-family: 'Kaisei Decol', serif !important;
+    padding: 12px !important;
 }
 .stButton > button {
     background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
     color: #1a0a0a !important;
-    font-size: 20px !important;
+    font-size: 18px !important;
     font-weight: bold !important;
     border: none !important;
     border-radius: 8px !important;
-    padding: 14px 20px !important;
+    padding: 12px 20px !important;
     font-family: 'Kaisei Decol', serif !important;
     letter-spacing: 2px !important;
     box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
     width: 100% !important;
-    max-width: 320px !important;
+    margin-top: 8px !important;
 }
 .horse-card {
     background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
@@ -116,10 +124,10 @@ st.markdown("""
     font-family: 'Kaisei Decol', serif;
 }
 @media (min-width: 768px) {
-    .main-title { font-size: 32px; }
-    .omikuji-box { padding: 20px; max-width: 450px; }
-    .input-container { max-width: 450px; }
-    .stButton > button { max-width: 450px !important; font-size: 24px !important; }
+    .center-container { max-width: 420px; }
+    .main-title { font-size: 28px; letter-spacing: 2px; }
+    .omikuji-box { padding: 18px 14px; }
+    .stButton > button { font-size: 22px !important; padding: 14px 24px !important; }
     .umaban, .umaban-star { font-size: 28px; }
     .horse-name { font-size: 18px; margin-left: 12px; }
     .section-title { font-size: 18px; }
@@ -352,6 +360,8 @@ def render_horse_card(umaban, name, is_star=False):
     else:
         st.markdown(f'<div class="horse-card"><span class="umaban">{umaban}</span><span class="horse-name">{name}</span></div>', unsafe_allow_html=True)
 
+st.markdown("<div class='center-container'>", unsafe_allow_html=True)
+
 st.markdown("""
 <div class='omikuji-box'>
     <div class='main-title'>🏇火花みたいな馬を…🏇</div>
@@ -366,9 +376,9 @@ except Exception as e:
     st.error(f"エラー: {e}")
     st.stop()
 
-st.markdown("<div class='input-container'>", unsafe_allow_html=True)
 race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
 predict_btn = st.button("💃盛れ！💃", type="primary", use_container_width=True)
+
 st.markdown("</div>", unsafe_allow_html=True)
 
 if predict_btn:
