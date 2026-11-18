@@ -11,7 +11,7 @@ import time
 PIPELINE_DIR = "pipeline"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-st.set_page_config(page_title="馬券おみくじ", page_icon="🏇", layout="wide")
+st.set_page_config(page_title="火花みたいな馬を…", page_icon="🏇", layout="wide")
 
 st.markdown("""
 <style>
@@ -22,7 +22,7 @@ st.markdown("""
 }
 .main-title {
     text-align: center;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
     color: #ffd700;
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
@@ -51,7 +51,7 @@ st.markdown("""
 .stButton > button {
     background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
     color: #1a0a0a !important;
-    font-size: 16px !important;
+    font-size: 18px !important;
     font-weight: bold !important;
     border: none !important;
     border-radius: 4px !important;
@@ -116,7 +116,7 @@ st.markdown("""
     font-family: 'Shippori Mincho', serif;
 }
 @media (min-width: 768px) {
-    .main-title { font-size: 42px; }
+    .main-title { font-size: 32px; }
     .sub-title { font-size: 14px; letter-spacing: 8px; }
     .omikuji-box { padding: 24px; }
     .umaban, .umaban-star { font-size: 28px; }
@@ -353,8 +353,8 @@ def render_horse_card(umaban, name, is_star=False):
 
 st.markdown("""
 <div class='omikuji-box'>
-    <div class='main-title'>🏇 馬券おみくじ</div>
-    <div class='sub-title'>〜 今日の勝ち馬 〜</div>
+    <div class='main-title'>🏇火花みたいな馬を…🏇</div>
+    <div class='sub-title'>〜 ミ・アモーレ 〜</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -369,7 +369,7 @@ except Exception as e:
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     race_id = st.text_input("", placeholder="レースID（12桁）", label_visibility="collapsed")
-    predict_btn = st.button("🎋 おみくじを引く", type="primary", use_container_width=True)
+    predict_btn = st.button("💃盛れ！💃", type="primary", use_container_width=True)
 
 if predict_btn:
     if len(race_id) != 12:
