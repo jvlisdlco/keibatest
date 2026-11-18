@@ -409,31 +409,49 @@ if predict_btn:
                     for _, row in partners.iterrows():
                         render_horse_card(row["umaban"], row["horse_name"], row["horse_name"] in ichioshi_names)
                 st.markdown("<div class='section-title'>💰 買い目</div>", unsafe_allow_html=True)
+                ichioshi_df = result[result["horse_name"].isin(ichioshi_names)].sort_values("相手順位")
+                ichioshi_nums = [str(x) for x in ichioshi_df["umaban"].tolist()]
                 axis_nums = [str(x) for x in axis_candidates["umaban"].tolist()]
                 partner_nums = [str(x) for x in partners["umaban"].tolist()]
-                ichioshi_df = axis_candidates[axis_candidates["horse_name"].isin(ichioshi_names)]
-                ichioshi_nums = [str(x) for x in ichioshi_df["umaban"].tolist()]
-                all_axis_nums = set(axis_nums)
-                all_partner_nums = set(partner_nums)
-                all_nums = all_axis_nums | all_partner_nums
-                if len(ichioshi_nums) >= 1:
+                all_nums_set = set(axis_nums) | set(partner_nums)
+                n_ichioshi = len(ichioshi_nums)
+                col_a, col_b = st.columns(2)
+                if n_ichioshi == 1:
                     axis_str = ichioshi_nums[0]
-                    flow_nums = sorted([n for n in all_nums if n != axis_str])
+                    flow_nums = sorted([n for n in all_nums_set if n != axis_str])
                     flow_str = ', '.join(flow_nums)
                     points = len(flow_nums)
-                    col_a, col_b = st.columns(2)
                     with col_a:
                         st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
                     with col_b:
                         st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
-                    if len(flow_nums) >= 2:
-                        sanren_points = len(flow_nums) * (len(flow_nums) - 1) // 2
-                        st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複</b><br>軸 {axis_str} → {flow_str}（{sanren_points}点）</div>", unsafe_allow_html=True)
+                elif n_ichioshi == 2:
+                    axis_str = ichioshi_nums[0]
+                    flow_nums = sorted([n for n in all_nums_set if n != axis_str])
+                    flow_str = ', '.join(flow_nums)
+                    points = len(flow_nums)
+                    with col_a:
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
+                    with col_b:
+                        st.markdown(f"<div class='bet-box'><b>馬連</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
+                elif n_ichioshi >= 3:
+                    axis_str = ichioshi_nums[0]
+                    flow_nums = sorted([n for n in all_nums_set if n != axis_str])
+                    flow_str = ', '.join(flow_nums)
+                    points = len(flow_nums)
+                    with col_a:
+                        st.markdown(f"<div class='bet-box'><b>ワイド</b><br>軸 {axis_str} → {flow_str}（{points}点）</div>", unsafe_allow_html=True)
+                    box_nums = sorted(list(all_nums_set))
+                    box_n = len(box_nums)
+                    box_points = box_n * (box_n - 1) // 2
+                    with col_b:
+                        st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{', '.join(box_nums)}（{box_points}点）</div>", unsafe_allow_html=True)
+                    sanren_points = box_n * (box_n - 1) * (box_n - 2) // 6 if box_n >= 3 else 0
+                    st.markdown(f"<div class='bet-box-chance'><b>🌟 3連複 BOX</b><br>{', '.join(box_nums)}（{sanren_points}点）</div>", unsafe_allow_html=True)
                 else:
-                    all_sorted = sorted(list(all_nums))
+                    all_sorted = sorted(list(all_nums_set))
                     n = len(all_sorted)
                     wide_points = n * (n - 1) // 2
-                    col_a, col_b = st.columns(2)
                     with col_a:
                         st.markdown(f"<div class='bet-box'><b>ワイド BOX</b><br>{', '.join(all_sorted)}（{wide_points}点）</div>", unsafe_allow_html=True)
                     with col_b:
