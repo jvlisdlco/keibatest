@@ -356,9 +356,12 @@ def predict_race(models, race_df, venue, surface):
         return None, "モデルなし"
     result = race_df.copy()
     result["score"] = scores
-    result["軸スコア"] = result["score"] + result["recent_win_rate"] * 10 + result["recent_top3_rate"] * 2.5
+    # 本命用：モデルスコア重視、recent_win_rateの重みを下げる
+    result["軸スコア"] = result["score"] + result["recent_win_rate"] * 4 + result["recent_top3_rate"] * 3 - result["recent_avg_rank"] * 0.3
     result["軸順位"] = result["軸スコア"].rank(ascending=False).astype(int)
-    result["相手順位"] = result["place_tendency"].rank(ascending=False).astype(int)
+    # 相手用：3着内率を重視
+    result["相手スコア"] = result["recent_top3_rate"] * 8 + result["place_tendency"] * 5 + result["score"] * 0.3
+    result["相手順位"] = result["相手スコア"].rank(ascending=False).astype(int)
     return result, model_type
 
 def render_horse_card(umaban, name, is_star=False):
@@ -401,8 +404,10 @@ if predict_btn:
             st.markdown(f"<div class='race-info'><span style='font-size:18px; color:#ffd700;'>{info['name']}</span><br><span style='color:#aaa; font-size:12px;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
+                # 本命：軸スコア上位3
                 axis_candidates = result.nsmallest(3, "軸順位")
-                partners = result.nlargest(4, "place_tendency")
+                # 相手：相手スコア上位4（本命と被ってもOK）
+                partners = result.nsmallest(4, "相手順位")
                 partner_names = set(partners["horse_name"])
                 axis_names = set(axis_candidates["horse_name"])
                 ichioshi_names = axis_names & partner_names
