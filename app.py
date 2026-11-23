@@ -16,119 +16,22 @@ st.set_page_config(page_title="火花みたいな馬を…", page_icon="🏇", l
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap');
-.stApp {
-    background: linear-gradient(180deg, #1a0a0a 0%, #2d1515 50%, #1a0a0a 100%);
-    font-family: 'Kaisei Decol', serif;
-}
-.center-container {
-    max-width: 340px;
-    margin: 0 auto;
-    padding: 0 10px;
-}
-.main-title {
-    text-align: center;
-    font-size: 20px;
-    font-weight: 400;
-    color: #fff;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 100, 100, 0.5);
-    margin: 0;
-    font-family: 'Kaisei Decol', serif;
-    letter-spacing: 1px;
-}
-.omikuji-box {
-    text-align: center;
-    padding: 14px 10px;
-    margin: 0 auto 12px auto;
-    background: linear-gradient(180deg, #8B0000 0%, #4a0000 100%);
-    border: 3px solid #ffd700;
-    border-radius: 8px;
-    box-shadow: 0 0 30px rgba(255, 100, 50, 0.4);
-}
-.stTextInput > div > div > input {
-    background: #2d1515 !important;
-    border: 2px solid #ffd700 !important;
-    border-radius: 8px !important;
-    color: #fff !important;
-    font-family: 'Kaisei Decol', serif !important;
-    padding: 12px !important;
-}
-.stButton > button {
-    background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important;
-    color: #1a0a0a !important;
-    font-size: 18px !important;
-    font-weight: bold !important;
-    border: none !important;
-    border-radius: 8px !important;
-    padding: 12px 20px !important;
-    font-family: 'Kaisei Decol', serif !important;
-    letter-spacing: 2px !important;
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4) !important;
-    width: 100% !important;
-    margin-top: 8px !important;
-}
-.horse-card {
-    background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%);
-    border-radius: 8px;
-    padding: 12px;
-    margin: 6px 0;
-    border-left: 4px solid #ffd700;
-}
-.horse-card-star {
-    background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
-    border-radius: 8px;
-    padding: 12px;
-    margin: 6px 0;
-    border: 2px solid #ffd700;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
-}
+.stApp { background: linear-gradient(180deg, #1a0a0a 0%, #2d1515 50%, #1a0a0a 100%); font-family: 'Kaisei Decol', serif; }
+.center-container { max-width: 340px; margin: 0 auto; padding: 0 10px; }
+.main-title { text-align: center; font-size: 20px; font-weight: 400; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(255,100,100,0.5); margin: 0; font-family: 'Kaisei Decol', serif; letter-spacing: 1px; }
+.omikuji-box { text-align: center; padding: 14px 10px; margin: 0 auto 12px auto; background: linear-gradient(180deg, #8B0000 0%, #4a0000 100%); border: 3px solid #ffd700; border-radius: 8px; box-shadow: 0 0 30px rgba(255,100,50,0.4); }
+.stTextInput > div > div > input { background: #2d1515 !important; border: 2px solid #ffd700 !important; border-radius: 8px !important; color: #fff !important; font-family: 'Kaisei Decol', serif !important; padding: 12px !important; }
+.stButton > button { background: linear-gradient(180deg, #ffd700 0%, #c9a227 100%) !important; color: #1a0a0a !important; font-size: 18px !important; font-weight: bold !important; border: none !important; border-radius: 8px !important; padding: 12px 20px !important; font-family: 'Kaisei Decol', serif !important; letter-spacing: 2px !important; box-shadow: 0 4px 15px rgba(255,215,0,0.4) !important; width: 100% !important; margin-top: 8px !important; }
+.horse-card { background: linear-gradient(135deg, #2d1515 0%, #1a0a0a 100%); border-radius: 8px; padding: 12px; margin: 6px 0; border-left: 4px solid #ffd700; }
+.horse-card-star { background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%); border-radius: 8px; padding: 12px; margin: 6px 0; border: 2px solid #ffd700; box-shadow: 0 0 15px rgba(255,215,0,0.4); }
 .umaban { font-size: 22px; font-weight: bold; color: #ff6b6b; font-family: 'Kaisei Decol', serif; }
 .umaban-star { font-size: 22px; font-weight: bold; color: #ffd700; font-family: 'Kaisei Decol', serif; }
 .horse-name { font-size: 14px; color: #eee; margin-left: 8px; font-family: 'Kaisei Decol', serif; }
-.section-title {
-    font-size: 16px;
-    font-weight: bold;
-    color: #ffd700;
-    margin: 16px 0 8px 0;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #ffd700;
-    font-family: 'Kaisei Decol', serif;
-}
-.section-note {
-    font-size: 11px;
-    color: #aaa;
-    font-weight: normal;
-    margin-left: 6px;
-}
-.bet-box {
-    background: #2d1515;
-    border: 1px solid #ffd700;
-    border-radius: 4px;
-    padding: 10px 12px;
-    margin: 6px 0;
-    color: #eee;
-    font-family: 'Kaisei Decol', serif;
-    font-size: 14px;
-}
-.bet-box-chance {
-    background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%);
-    border: 2px solid #ffd700;
-    border-radius: 4px;
-    padding: 10px 12px;
-    margin: 6px 0;
-    color: #ffd700;
-    font-family: 'Kaisei Decol', serif;
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-    font-size: 14px;
-}
-.race-info {
-    text-align: center;
-    padding: 12px;
-    background: #2d1515;
-    border: 1px solid #ffd700;
-    border-radius: 8px;
-    margin: 12px 0;
-    font-family: 'Kaisei Decol', serif;
-}
+.section-title { font-size: 16px; font-weight: bold; color: #ffd700; margin: 16px 0 8px 0; padding-bottom: 6px; border-bottom: 1px solid #ffd700; font-family: 'Kaisei Decol', serif; }
+.section-note { font-size: 11px; color: #aaa; font-weight: normal; margin-left: 6px; }
+.bet-box { background: #2d1515; border: 1px solid #ffd700; border-radius: 4px; padding: 10px 12px; margin: 6px 0; color: #eee; font-family: 'Kaisei Decol', serif; font-size: 14px; }
+.bet-box-chance { background: linear-gradient(135deg, #3d2020 0%, #2d1515 100%); border: 2px solid #ffd700; border-radius: 4px; padding: 10px 12px; margin: 6px 0; color: #ffd700; font-family: 'Kaisei Decol', serif; box-shadow: 0 0 10px rgba(255,215,0,0.3); font-size: 14px; }
+.race-info { text-align: center; padding: 12px; background: #2d1515; border: 1px solid #ffd700; border-radius: 8px; margin: 12px 0; font-family: 'Kaisei Decol', serif; }
 @media (min-width: 768px) {
     .center-container { max-width: 420px; }
     .main-title { font-size: 28px; letter-spacing: 2px; }
@@ -356,11 +259,11 @@ def predict_race(models, race_df, venue, surface):
         return None, "モデルなし"
     result = race_df.copy()
     result["score"] = scores
-    # 本命用：モデルスコア重視、recent_win_rateの重みを下げる
-    result["軸スコア"] = result["score"] + result["recent_win_rate"] * 4 + result["recent_top3_rate"] * 3 - result["recent_avg_rank"] * 0.3
+    # 本命：モデルスコア中心＋安定性（飛びを抑える）
+    result["軸スコア"] = result["score"] + result["recent_top3_rate"] * 2.5 + result["recent_win_rate"] * 1.5 - result["recent_avg_rank"] * 0.4
     result["軸順位"] = result["軸スコア"].rank(ascending=False).astype(int)
-    # 相手用：3着内率を重視
-    result["相手スコア"] = result["recent_top3_rate"] * 8 + result["place_tendency"] * 5 + result["score"] * 0.3
+    # 相手：3着内率を最重視＋モデルスコア少し混ぜ
+    result["相手スコア"] = result["recent_top3_rate"] * 10 + result["place_tendency"] * 4 + result["score"] * 0.4
     result["相手順位"] = result["相手スコア"].rank(ascending=False).astype(int)
     return result, model_type
 
@@ -404,10 +307,8 @@ if predict_btn:
             st.markdown(f"<div class='race-info'><span style='font-size:18px; color:#ffd700;'>{info['name']}</span><br><span style='color:#aaa; font-size:12px;'>{info['venue']} / {label} / {info['distance']}m</span></div>", unsafe_allow_html=True)
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
-                # 本命：軸スコア上位3
                 axis_candidates = result.nsmallest(3, "軸順位")
-                # 相手：相手スコア上位4（本命と被ってもOK）
-                partners = result.nsmallest(4, "相手順位")
+                partners = result.nsmallest(5, "相手順位")  # 5頭に拡大
                 partner_names = set(partners["horse_name"])
                 axis_names = set(axis_candidates["horse_name"])
                 ichioshi_names = axis_names & partner_names
