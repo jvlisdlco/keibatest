@@ -259,12 +259,11 @@ def predict_race(models, race_df, venue, surface):
         return None, "モデルなし"
     result = race_df.copy()
     result["score"] = scores
-    # 本命：モデルスコア中心＋安定性（飛びを抑える）
     result["軸スコア"] = result["score"] + result["recent_top3_rate"] * 2.5 + result["recent_win_rate"] * 1.5 - result["recent_avg_rank"] * 0.4
     result["軸順位"] = result["軸スコア"].rank(ascending=False).astype(int)
-    # 相手：3着内率を最重視＋モデルスコア少し混ぜ
-    result["相手スコア"] = result["recent_top3_rate"] * 10 + result["place_tendency"] * 4 + result["score"] * 0.4
+    result["相手スコア"] = result["recent_top3_rate"] * 8 + result["place_tendency"] * 3 + result["score"] * 0.5
     result["相手順位"] = result["相手スコア"].rank(ascending=False).astype(int)
+    result["モデル順位"] = result["score"].rank(ascending=False).astype(int)
     return result, model_type
 
 def render_horse_card(umaban, name, is_star=False):
@@ -308,7 +307,11 @@ if predict_btn:
             result, mtype = predict_race(models, info["horses"], info["venue"], info["surface"])
             if result is not None:
                 axis_candidates = result.nsmallest(3, "軸順位")
-                partners = result.nsmallest(5, "相手順位")  # 5頭に拡大
+                # 相手：3着内率上位3頭 + モデルスコア中位〜下位から2頭
+                form_partners = result.nsmallest(3, "相手順位")
+                mid_low = result[(result["モデル順位"] >= 4) & (result["モデル順位"] <= 10)]
+                model_partners = mid_low.nsmallest(2, "モデル順位") if len(mid_low) >= 2 else result.nlargest(2, "モデル順位")
+                partners = pd.concat([form_partners, model_partners]).drop_duplicates(subset=["horse_name"]).head(5)
                 partner_names = set(partners["horse_name"])
                 axis_names = set(axis_candidates["horse_name"])
                 ichioshi_names = axis_names & partner_names
@@ -371,8 +374,8 @@ if predict_btn:
                     with col_b:
                         st.markdown(f"<div class='bet-box'><b>馬連 BOX</b><br>{', '.join(all_sorted)}（{wide_points}点）</div>", unsafe_allow_html=True)
                 with st.expander("全馬一覧"):
-                    display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位"]].sort_values("軸順位")
-                    display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位"]
+                    display = result[["umaban", "horse_name", "jockey", "軸順位", "相手順位", "モデル順位"]].sort_values("軸順位")
+                    display.columns = ["馬番", "馬名", "騎手", "軸順位", "相手順位", "モデル順位"]
                     st.dataframe(display, hide_index=True, use_container_width=True)
             else:
                 st.error(mtype)
